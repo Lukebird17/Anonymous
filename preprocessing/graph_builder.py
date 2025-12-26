@@ -119,18 +119,23 @@ class GraphBuilder:
         logger.info("计算节点拓扑特征...")
         
         # 度中心性
+        logger.info("  计算度中心性...")
         degree_centrality = nx.degree_centrality(G)
         
-        # 介数中心性
+        # 介数中心性  
+        logger.info("  计算介数中心性...")
         betweenness_centrality = nx.betweenness_centrality(G)
         
         # 接近中心性
+        logger.info("  计算接近中心性...")
         closeness_centrality = nx.closeness_centrality(G)
         
-        # PageRank
-        pagerank = nx.pagerank(G)
+        # 跳过PageRank（库不兼容），使用度中心性替代
+        logger.info("  跳过PageRank（使用度中心性替代）...")
+        pagerank = degree_centrality
         
         # 聚集系数
+        logger.info("  计算聚类系数...")
         if G.is_directed():
             G_undirected = G.to_undirected()
             clustering = nx.clustering(G_undirected)
@@ -138,6 +143,7 @@ class GraphBuilder:
             clustering = nx.clustering(G)
         
         # 将特征添加到节点
+        logger.info("  添加特征到节点...")
         for node in G.nodes():
             G.nodes[node]['degree_centrality'] = degree_centrality.get(node, 0)
             G.nodes[node]['betweenness_centrality'] = betweenness_centrality.get(node, 0)

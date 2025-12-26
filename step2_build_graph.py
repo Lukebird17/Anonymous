@@ -4,6 +4,7 @@
 """
 
 import sys
+import argparse
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -11,6 +12,10 @@ from preprocessing.graph_builder import GraphBuilder
 import pickle
 
 def main():
+    parser = argparse.ArgumentParser(description='构建图并计算特征')
+    parser.add_argument('--input', type=str, required=True, help='输入数据文件路径')
+    args = parser.parse_args()
+    
     print("="*60)
     print("步骤2: 构建图并计算特征")
     print("="*60)
@@ -19,15 +24,21 @@ def main():
     builder = GraphBuilder()
     
     # 加载数据并构建图
-    data_path = Path(__file__).parent / 'data' / 'raw' / 'example_data.json'
+    data_path = Path(args.input)
     
     if not data_path.exists():
         print(f"\n❌ 错误: 找不到数据文件 {data_path}")
-        print(f"   请先运行: python step1_generate_data.py")
         return
     
     print(f"\n📂 加载数据: {data_path}")
-    G = builder.build_from_github(data_path, use_starred_repos=False)
+    
+    # 根据文件类型选择构建方法
+    if 'weibo' in str(data_path):
+        # 微博数据格式
+        G = builder.build_from_weibo(data_path)
+    else:
+        # GitHub数据格式
+        G = builder.build_from_github(data_path, use_starred_repos=False)
     
     print(f"\n🔢 计算节点特征...")
     G = builder.compute_node_features(G)
