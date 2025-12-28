@@ -365,7 +365,6 @@ class ImprovedWeiboCrawler:
 
 
 def main():
-    """主函数"""
     print("="*70)
     print("改进版微博爬虫 - 使用多种方法获取关注列表")
     print("="*70)
@@ -374,7 +373,7 @@ def main():
     start_uid = input("\n请输入起始用户UID（直接回车使用'人民日报'）: ").strip()
     if not start_uid:
         start_uid = "2803301701"
-        print(f"使用默认: 人民日报 ({start_uid})")
+        tqdm.write(f"使用默认: 人民日报 ({start_uid})")
     
     max_users_input = input("\n爬取多少个用户？（直接回车使用200）: ").strip()
     max_users = int(max_users_input) if max_users_input else 200
@@ -421,18 +420,18 @@ def main():
         crawler.close()
         
         if data['metadata']['total_edges'] > 0:
-            print("\n✅ 成功获取到关注关系！")
-            print("\n下一步:")
-            print(f"  1. python step2_build_graph.py --input {output_path}")
-            print("  2. python step3_anonymize.py")
-            print("  3. python step4_attack.py")
+            tqdm.write("\n✅ 成功获取到关注关系！")
+            tqdm.write("\n下一步:")
+            tqdm.write(f"  1. python step2_build_graph.py --input {output_path}")
+            tqdm.write("  2. python step3_anonymize.py")
+            tqdm.write("  3. python step4_attack.py")
         else:
-            print("\n⚠️  未获取到关注关系")
-            print("可能原因：")
-            print("  1. 未正确登录")
-            print("  2. 该用户没有公开的关注列表")
-            print("  3. 页面结构变化")
-            print("\n建议: 尝试使用你自己的微博账号UID")
+            tqdm.write("\n⚠️  未获取到关注关系")
+            tqdm.write("可能原因：")
+            tqdm.write("  1. 未正确登录")
+            tqdm.write("  2. 该用户没有公开的关注列表")
+            tqdm.write("  3. 页面结构变化")
+            tqdm.write("\n建议: 尝试使用你自己的微博账号UID")
         
     except Exception as e:
         logger.error(f"\n❌ 发生错误: {e}")
