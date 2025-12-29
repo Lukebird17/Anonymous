@@ -112,8 +112,8 @@ class UnifiedAutoVisualizer:
             if item['method'] not in methods:
                 methods.append(item['method'])
         
-        # 只显示主要方法（排除DeepWalk，因为效果太差）
-        main_methods = [m for m in methods if m != 'DeepWalk']
+        # 显示所有方法（包括DeepWalk）
+        main_methods = methods
         
         fig, axes = plt.subplots(1, 3, figsize=(18, 5))
         
@@ -123,24 +123,32 @@ class UnifiedAutoVisualizer:
             key = f"{item['level']}-{item['method']}"
             data_dict[key] = item
         
+        # 定义方法颜色
+        method_colors = {
+            'Baseline-Greedy': COLORS['primary'],
+            'Hungarian': COLORS['secondary'],
+            'Node-Features': COLORS['success'],
+            'DeepWalk': COLORS['danger']
+        }
+        
         # 子图1: Top-1准确率对比
         ax1 = axes[0]
         x = np.arange(len(levels))
-        width = 0.25
+        width = 0.8 / len(main_methods)  # 动态调整宽度
         
         for i, method in enumerate(main_methods):
             accuracies = [data_dict[f'{level}-{method}']['accuracy'] * 100 
                          for level in levels if f'{level}-{method}' in data_dict]
             if accuracies:
-                ax1.bar(x + i*width, accuracies, width, label=method,
-                       color=[COLORS['primary'], COLORS['secondary'], COLORS['success']][i % 3])
+                color = method_colors.get(method, list(COLORS.values())[i % len(COLORS)])
+                ax1.bar(x + i*width - 0.4 + width/2, accuracies, width, label=method, color=color)
         
         ax1.set_xlabel('Anonymization Strength', fontsize=12, fontweight='bold')
         ax1.set_ylabel('Top-1 Accuracy (%)', fontsize=12, fontweight='bold')
         ax1.set_title('De-anonymization Attack - Top-1 Accuracy', fontsize=14, fontweight='bold')
-        ax1.set_xticks(x + width)
+        ax1.set_xticks(x)
         ax1.set_xticklabels(['Mild', 'Medium', 'Strong'])
-        ax1.legend()
+        ax1.legend(fontsize=9)
         ax1.grid(axis='y', alpha=0.3)
         
         # 子图2: Precision@5对比
@@ -149,13 +157,14 @@ class UnifiedAutoVisualizer:
             p5_scores = [data_dict[f'{level}-{method}']['precision@5'] * 100 
                         for level in levels if f'{level}-{method}' in data_dict]
             if p5_scores:
+                color = method_colors.get(method, list(COLORS.values())[i % len(COLORS)])
                 ax2.plot(['Mild', 'Medium', 'Strong'], p5_scores, 'o-', linewidth=2, markersize=8,
-                        label=method, color=[COLORS['primary'], COLORS['secondary'], COLORS['success']][i % 3])
+                        label=method, color=color)
         
         ax2.set_xlabel('Anonymization Strength', fontsize=12, fontweight='bold')
         ax2.set_ylabel('Precision@5 (%)', fontsize=12, fontweight='bold')
         ax2.set_title('De-anonymization Attack - Precision@5', fontsize=14, fontweight='bold')
-        ax2.legend()
+        ax2.legend(fontsize=9)
         ax2.grid(alpha=0.3)
         
         # 子图3: MRR对比
@@ -164,8 +173,9 @@ class UnifiedAutoVisualizer:
             mrr_scores = [data_dict[f'{level}-{method}']['mrr'] 
                          for level in levels if f'{level}-{method}' in data_dict]
             if mrr_scores:
+                color = method_colors.get(method, list(COLORS.values())[i % len(COLORS)])
                 ax3.plot(['Mild', 'Medium', 'Strong'], mrr_scores, 's-', linewidth=2, markersize=8,
-                        label=method, color=[COLORS['primary'], COLORS['secondary'], COLORS['success']][i % 3])
+                        label=method, color=color)
         
         ax3.set_xlabel('Anonymization Strength', fontsize=12, fontweight='bold')
         ax3.set_ylabel('MRR', fontsize=12, fontweight='bold')
@@ -198,53 +208,70 @@ class UnifiedAutoVisualizer:
             key = f"{item['hide_ratio']}-{item['method']}"
             data_dict[key] = item
         
+        # 定义方法颜色和显示名称
+        method_config = {
+            'Neighbor-Voting': {'color': COLORS['warning'], 'label': 'Neighbor Voting'},
+            'Label-Propagation': {'color': COLORS['success'], 'label': 'Label Propagation'},
+            'GraphSAGE': {'color': COLORS['danger'], 'label': 'GraphSAGE (GNN)'}
+        }
+        
         # 子图1: 准确率对比（柱状图）
         ax1 = axes[0]
         x = np.arange(len(hide_ratios))
-        width = 0.35
+        width = 0.8 / len(methods)  # 动态调整宽度
         
         hide_labels = [f'{int(r*100)}%' for r in hide_ratios]
         
-        if 'Neighbor-Voting' in methods and 'Label-Propagation' in methods:
-            nv_acc = [data_dict[f'{r}-Neighbor-Voting']['accuracy'] * 100 
-                     for r in hide_ratios if f'{r}-Neighbor-Voting' in data_dict]
-            lp_acc = [data_dict[f'{r}-Label-Propagation']['accuracy'] * 100 
-                     for r in hide_ratios if f'{r}-Label-Propagation' in data_dict]
-            
-            bars1 = ax1.bar(x - width/2, nv_acc, width, label='Neighbor Voting',
-                           color=COLORS['warning'], alpha=0.8)
-            bars2 = ax1.bar(x + width/2, lp_acc, width, label='Label Propagation',
-                           color=COLORS['success'], alpha=0.8)
-            
-            # 添加数值标签
-            for bars in [bars1, bars2]:
-                for bar in bars:
-                    height = bar.get_height()
-                    ax1.text(bar.get_x() + bar.get_width()/2., height,
-                            f'{height:.1f}%', ha='center', va='bottom', fontsize=10)
+        all_bars = []
+        for i, method in enumerate(methods):
+            if method in method_config:
+                accuracies = [data_dict[f'{r}-{method}']['accuracy'] * 100 
+                             for r in hide_ratios if f'{r}-{method}' in data_dict]
+                
+                if accuracies:
+                    offset = (i - len(methods)/2 + 0.5) * width
+                    bars = ax1.bar(x + offset, accuracies, width, 
+                                  label=method_config[method]['label'],
+                                  color=method_config[method]['color'], alpha=0.8)
+                    all_bars.append(bars)
+        
+        # 添加数值标签
+        for bars in all_bars:
+            for bar in bars:
+                height = bar.get_height()
+                ax1.text(bar.get_x() + bar.get_width()/2., height,
+                        f'{height:.1f}%', ha='center', va='bottom', fontsize=9)
         
         ax1.set_xlabel('Hidden Label Ratio', fontsize=12, fontweight='bold')
         ax1.set_ylabel('Accuracy (%)', fontsize=12, fontweight='bold')
         ax1.set_title('Attribute Inference - Accuracy Comparison', fontsize=14, fontweight='bold')
         ax1.set_xticks(x)
         ax1.set_xticklabels(hide_labels)
-        ax1.legend()
+        ax1.legend(fontsize=10)
         ax1.grid(axis='y', alpha=0.3)
         
         # 子图2: 准确率趋势（折线图）
         ax2 = axes[1]
         x_numeric = [int(r*100) for r in hide_ratios]
         
-        if 'Neighbor-Voting' in methods and 'Label-Propagation' in methods:
-            ax2.plot(x_numeric, nv_acc, 'o-', linewidth=3, markersize=10,
-                    label='Neighbor Voting', color=COLORS['warning'])
-            ax2.plot(x_numeric, lp_acc, 's-', linewidth=3, markersize=10,
-                    label='Label Propagation', color=COLORS['success'])
+        # 定义不同的标记样式
+        markers = ['o', 's', '^', 'D', 'v']
+        
+        for i, method in enumerate(methods):
+            if method in method_config:
+                accuracies = [data_dict[f'{r}-{method}']['accuracy'] * 100 
+                             for r in hide_ratios if f'{r}-{method}' in data_dict]
+                
+                if accuracies:
+                    marker = markers[i % len(markers)]
+                    ax2.plot(x_numeric, accuracies, f'{marker}-', linewidth=3, markersize=10,
+                            label=method_config[method]['label'], 
+                            color=method_config[method]['color'])
         
         ax2.set_xlabel('Hidden Label Ratio (%)', fontsize=12, fontweight='bold')
         ax2.set_ylabel('Accuracy (%)', fontsize=12, fontweight='bold')
         ax2.set_title('Attribute Inference - Accuracy Trend', fontsize=14, fontweight='bold')
-        ax2.legend()
+        ax2.legend(fontsize=10)
         ax2.grid(alpha=0.3)
         
         plt.tight_layout()
