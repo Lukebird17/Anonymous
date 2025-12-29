@@ -15,10 +15,14 @@ data/processed/*.gpickle
 data/processed/*.edgelist
 data/anonymized/*
 
+# Cookie files (security)
+data/.weibo_cookies*.pkl
+*.pkl
+
 # Model files
 models/*.bin
 models/*.npy
-models/*.pkl
+# Note: *.pkl already excluded in Data files section
 
 # Results
 results/*.png

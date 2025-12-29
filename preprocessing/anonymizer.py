@@ -18,31 +18,39 @@ logger = logging.getLogger(__name__)
 class GraphAnonymizer:
     """图匿名化器"""
     
-    def __init__(self, edge_retention_ratio: float = 0.7,
+    def __init__(self, G: nx.Graph = None, 
+                 edge_retention_ratio: float = 0.7,
                  add_noise_edges: bool = False,
                  noise_ratio: float = 0.05):
         """
         初始化匿名化器
         
         Args:
+            G: 原始图（可选，为了兼容新接口）
             edge_retention_ratio: 保留边的比例
             add_noise_edges: 是否添加噪声边
             noise_ratio: 噪声边占原图边数的比例
         """
+        self.G = G
         self.edge_retention_ratio = edge_retention_ratio
         self.add_noise_edges = add_noise_edges
         self.noise_ratio = noise_ratio
     
-    def anonymize(self, G: nx.Graph) -> Tuple[nx.Graph, Dict]:
+    def anonymize(self, G: nx.Graph = None) -> Tuple[nx.Graph, Dict]:
         """
         对图进行匿名化处理
         
         Args:
-            G: 原始图
+            G: 原始图（如果在初始化时提供了，可以不传）
             
         Returns:
             (匿名图, 节点映射字典 {原始节点: 匿名节点})
         """
+        if G is None:
+            G = self.G
+        if G is None:
+            raise ValueError("需要提供图对象")
+            
         logger.info("开始匿名化处理...")
         
         # 1. 创建节点ID映射（打乱顺序）
@@ -77,6 +85,29 @@ class GraphAnonymizer:
             self._add_noise_edges(G_anon, n_noise=int(len(edges) * self.noise_ratio))
         
         return G_anon, node_mapping
+    
+    def anonymize_with_perturbation(self, edge_retention_ratio: float = None,
+                                    noise_edge_ratio: float = None) -> Tuple[nx.Graph, Dict]:
+        """
+        对图进行匿名化处理（带扰动）
+        新接口，兼容 main_experiment.py
+        
+        Args:
+            edge_retention_ratio: 保留边的比例（覆盖初始化参数）
+            noise_edge_ratio: 噪声边比例（覆盖初始化参数）
+            
+        Returns:
+            (匿名图, 节点映射字典 {原始节点: 匿名节点})
+        """
+        # 更新参数
+        if edge_retention_ratio is not None:
+            self.edge_retention_ratio = edge_retention_ratio
+        if noise_edge_ratio is not None:
+            self.noise_ratio = noise_edge_ratio
+            self.add_noise_edges = True if noise_edge_ratio > 0 else False
+        
+        # 调用原有的 anonymize 方法
+        return self.anonymize()
     
     def _add_noise_edges(self, G: nx.Graph, n_noise: int):
         """

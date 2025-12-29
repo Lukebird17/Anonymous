@@ -118,6 +118,19 @@ class DeepWalk:
         
         logger.info("DeepWalk模型训练完成")
     
+    def train(self, graph: nx.Graph) -> np.ndarray:
+        """
+        训练DeepWalk模型并返回嵌入（兼容接口）
+        
+        Args:
+            graph: NetworkX图
+            
+        Returns:
+            嵌入矩阵
+        """
+        self.fit(graph)
+        return self.get_embeddings()
+    
     def get_embedding(self, node) -> np.ndarray:
         """
         获取单个节点的嵌入向量
@@ -233,4 +246,7 @@ def main():
 if __name__ == "__main__":
     main()
 
+
+# 别名，用于兼容性
+DeepWalkModel = DeepWalk
 
