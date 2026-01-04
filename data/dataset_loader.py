@@ -84,14 +84,22 @@ class DatasetLoader:
                     features = np.array([int(x) for x in parts[1:]])
                     attributes[node_id] = {'features': features}
         
-        # 加载特征名称
+        # 加载特征名称并分类
+        feature_metadata = {}
         if os.path.exists(featnames_file):
-            feature_names = []
             with open(featnames_file, 'r') as f:
                 for line in f:
-                    parts = line.strip().split(';')
-                    if len(parts) == 2:
-                        feature_names.append(parts[1])
+                    parts = line.strip().split()
+                    if len(parts) >= 2:
+                        feat_id = int(parts[0])
+                        rest = ' '.join(parts[1:])
+                        category_parts = rest.split(';')
+                        category = category_parts[0] if category_parts else 'unknown'
+                        
+                        feature_metadata[feat_id] = {
+                            'category': category,
+                            'full_name': rest
+                        }
         
         # 加载社交圈标签
         if os.path.exists(circles_file):
@@ -116,6 +124,9 @@ class DatasetLoader:
         print(f"  - 节点数: {G.number_of_nodes()}")
         print(f"  - 边数: {G.number_of_edges()}")
         print(f"  - 平均度: {2*G.number_of_edges()/G.number_of_nodes():.2f}")
+        
+        # 添加特征元数据到返回值
+        attributes['_feat_metadata'] = feature_metadata
         
         return G, attributes
     

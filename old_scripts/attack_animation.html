@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图匿名化攻击原理动画演示</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+            color: #333;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            gap: 20px;
+        }
+        
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        header h1 {
+            font-size: 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .main-content {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+            min-height: 0;
+        }
+        
+        /* 图可视化区域 */
+        .graphs-container {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .graph-row {
+            display: flex;
+            gap: 15px;
+            flex: 1;
+            min-height: 0;
+        }
+        
+        .graph-box {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .graph-box h3 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .graph-box .icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+        }
+        
+        .icon.original {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+        
+        .icon.anonymized {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+        }
+        
+        .icon.attack {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+            color: white;
+        }
+        
+        .graph-svg {
+            flex: 1;
+            min-height: 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+        
+        /* 控制面板 */
+        .control-panel {
+            flex: 0 0 380px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+        
+        .control-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .control-section h3 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+        }
+        
+        .btn-info {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        /* 进度显示 */
+        .progress-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+        }
+        
+        .progress-section h3 {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .stage-list {
+            list-style: none;
+        }
+        
+        .stage-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            background: white;
+            border-left: 4px solid #e0e0e0;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .stage-item.active {
+            border-left-color: #667eea;
+            background: #e8eaf6;
+            font-weight: 600;
+        }
+        
+        .stage-item.completed {
+            border-left-color: #4CAF50;
+            opacity: 0.7;
+        }
+        
+        .stage-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            background: #e0e0e0;
+            color: #666;
+        }
+        
+        .stage-item.active .stage-icon {
+            background: #667eea;
+            color: white;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        .stage-item.completed .stage-icon {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+        }
+        
+        /* 统计信息 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        /* 消息提示 */
+        .message-box {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 0.95em;
+            line-height: 1.6;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .message-box.show {
+            display: block;
+        }
+        
+        .message-box.info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            color: #1565C0;
+        }
+        
+        .message-box.success {
+            background: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+            color: #2e7d32;
+        }
+        
+        .message-box.warning {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            color: #e65100;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* D3.js 样式 */
+        .node {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .node circle {
+            stroke: #fff;
+            stroke-width: 2px;
+        }
+        
+        .node.highlighted circle {
+            stroke: #ff9800;
+            stroke-width: 4px;
+            filter: drop-shadow(0 0 8px #ff9800);
+        }
+        
+        .node.matched circle {
+            stroke: #4CAF50;
+            stroke-width: 4px;
+            filter: drop-shadow(0 0 8px #4CAF50);
+        }
+        
+        .node.seed circle {
+            stroke: #f44336;
+            stroke-width: 4px;
+            filter: drop-shadow(0 0 8px #f44336);
+        }
+        
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+            stroke-width: 1.5px;
+        }
+        
+        .link.highlighted {
+            stroke: #ff9800;
+            stroke-width: 3px;
+            stroke-opacity: 1;
+            animation: flowAnimation 1s ease-in-out infinite;
+        }
+        
+        @keyframes flowAnimation {
+            0%, 100% {
+                stroke-opacity: 0.6;
+            }
+            50% {
+                stroke-opacity: 1;
+            }
+        }
+        
+        .node text {
+            font-size: 10px;
+            pointer-events: none;
+            fill: #333;
+            font-weight: 600;
+        }
+        
+        /* 加载动画 */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 图匿名化攻击原理动画演示</h1>
+            <p>展示社交网络图的匿名化过程及攻击原理</p>
+        </header>
+        
+        <div class="main-content">
+            <!-- 图可视化区域 -->
+            <div class="graphs-container">
+                <!-- 第一行：原始图和匿名化图 -->
+                <div class="graph-row">
+                    <div class="graph-box">
+                        <h3>
+                            <span class="icon original">🌐</span>
+                            原始社交网络图
+                        </h3>
+                        <svg id="graph-original" class="graph-svg"></svg>
+                    </div>
+                    <div class="graph-box">
+                        <h3>
+                            <span class="icon anonymized">🔒</span>
+                            匿名化后的图
+                        </h3>
+                        <svg id="graph-anonymized" class="graph-svg"></svg>
+                    </div>
+                </div>
+                
+                <!-- 第二行：攻击演示图 -->
+                <div class="graph-row">
+                    <div class="graph-box">
+                        <h3>
+                            <span class="icon attack">⚡</span>
+                            攻击过程演示
+                        </h3>
+                        <svg id="graph-attack" class="graph-svg"></svg>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 控制面板 -->
+            <div class="control-panel">
+                <!-- 主控制 -->
+                <div class="control-section">
+                    <h3>⚙️ 主控制</h3>
+                    <div class="button-group">
+                        <button class="btn btn-primary" id="btn-start">
+                            ▶️ 开始演示
+                        </button>
+                        <button class="btn btn-info" id="btn-next" disabled>
+                            ⏭️ 下一步
+                        </button>
+                        <button class="btn btn-danger" id="btn-reset">
+                            🔄 重置
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 攻击阶段 -->
+                <div class="progress-section">
+                    <h3>📋 攻击阶段</h3>
+                    <ul class="stage-list">
+                        <li class="stage-item" data-stage="0">
+                            <span class="stage-icon">1</span>
+                            <span>初始化：显示原始图和匿名化图</span>
+                        </li>
+                        <li class="stage-item" data-stage="1">
+                            <span class="stage-icon">2</span>
+                            <span>种子节点识别</span>
+                        </li>
+                        <li class="stage-item" data-stage="2">
+                            <span class="stage-icon">3</span>
+                            <span>结构指纹匹配</span>
+                        </li>
+                        <li class="stage-item" data-stage="3">
+                            <span class="stage-icon">4</span>
+                            <span>传播攻击</span>
+                        </li>
+                        <li class="stage-item" data-stage="4">
+                            <span class="stage-icon">5</span>
+                            <span>属性推断</span>
+                        </li>
+                        <li class="stage-item" data-stage="5">
+                            <span class="stage-icon">6</span>
+                            <span>完成：显示攻击结果</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- 统计信息 -->
+                <div class="progress-section">
+                    <h3>📊 统计信息</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-nodes">0</div>
+                            <div class="stat-label">节点数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-edges">0</div>
+                            <div class="stat-label">边数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-matched">0</div>
+                            <div class="stat-label">已匹配</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-accuracy">0%</div>
+                            <div class="stat-label">准确率</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 消息框 -->
+                <div class="message-box" id="message-box"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let originalData = null;
+        let anonymizedData = null;
+        let currentStage = 0;
+        let matchedNodes = new Set();
+        let seedNodes = [];
+        let isAnimating = false;
+        
+        // 图的布局参数
+        const graphConfig = {
+            nodeRadius: 8,
+            linkDistance: 80,
+            chargeStrength: -300,
+            collisionRadius: 20
+        };
+        
+        // 加载数据
+        async function loadData() {
+            try {
+                showMessage('正在加载数据...', 'info');
+                const response = await fetch('all_stages_demo_data.json');
+                const data = await response.json();
+                
+                originalData = data.graph_orig;
+                anonymizedData = data.graph_anon;
+                
+                // 更新统计信息
+                updateStats();
+                
+                // 初始化图
+                initGraphs();
+                
+                showMessage('数据加载成功！点击"开始演示"查看攻击过程', 'success');
+            } catch (error) {
+                console.error('加载数据失败:', error);
+                showMessage('数据加载失败，将使用示例数据', 'warning');
+                generateSampleData();
+            }
+        }
+        
+        // 生成示例数据
+        function generateSampleData() {
+            const numNodes = 20;
+            const nodes = [];
+            const links = [];
+            
+            // 创建节点
+            for (let i = 0; i < numNodes; i++) {
+                nodes.push({
+                    id: String(i),
+                    index: i,
+                    degree: 0
+                });
+            }
+            
+            // 创建边（环状网络 + 一些随机连接）
+            for (let i = 0; i < numNodes; i++) {
+                // 环状连接
+                links.push({
+                    source: String(i),
+                    target: String((i + 1) % numNodes)
+                });
+                
+                // 随机连接
+                if (Math.random() > 0.5) {
+                    const target = Math.floor(Math.random() * numNodes);
+                    if (target !== i) {
+                        links.push({
+                            source: String(i),
+                            target: String(target)
+                        });
+                    }
+                }
+            }
+            
+            // 计算度
+            links.forEach(link => {
+                const sourceNode = nodes.find(n => n.id === link.source);
+                const targetNode = nodes.find(n => n.id === link.target);
+                if (sourceNode) sourceNode.degree++;
+                if (targetNode) targetNode.degree++;
+            });
+            
+            originalData = { nodes, links };
+            
+            // 匿名化图（节点ID随机打乱）
+            const shuffledIds = nodes.map(n => n.id).sort(() => Math.random() - 0.5);
+            const idMap = {};
+            nodes.forEach((n, i) => {
+                idMap[n.id] = shuffledIds[i];
+            });
+            
+            anonymizedData = {
+                nodes: nodes.map((n, i) => ({
+                    id: shuffledIds[i],
+                    index: i,
+                    degree: n.degree
+                })),
+                links: links.map(l => ({
+                    source: idMap[l.source],
+                    target: idMap[l.target]
+                }))
+            };
+            
+            updateStats();
+            initGraphs();
+        }
+        
+        // 更新统计信息
+        function updateStats() {
+            if (!originalData) return;
+            
+            document.getElementById('stat-nodes').textContent = originalData.nodes.length;
+            document.getElementById('stat-edges').textContent = originalData.links.length;
+            document.getElementById('stat-matched').textContent = matchedNodes.size;
+            
+            const accuracy = originalData.nodes.length > 0 
+                ? Math.round((matchedNodes.size / originalData.nodes.length) * 100)
+                : 0;
+            document.getElementById('stat-accuracy').textContent = accuracy + '%';
+        }
+        
+        // 显示消息
+        function showMessage(text, type = 'info') {
+            const messageBox = document.getElementById('message-box');
+            messageBox.textContent = text;
+            messageBox.className = `message-box show ${type}`;
+            
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, 5000);
+        }
+        
+        // 初始化所有图
+        function initGraphs() {
+            if (!originalData || !anonymizedData) return;
+            
+            drawGraph('graph-original', JSON.parse(JSON.stringify(originalData)), 'original');
+            drawGraph('graph-anonymized', JSON.parse(JSON.stringify(anonymizedData)), 'anonymized');
+            drawGraph('graph-attack', JSON.parse(JSON.stringify(anonymizedData)), 'attack');
+        }
+        
+        // 绘制图
+        function drawGraph(svgId, graphData, type) {
+            const svg = d3.select(`#${svgId}`);
+            svg.selectAll('*').remove();
+            
+            const container = svg.node().parentElement;
+            const width = container.clientWidth - 40;
+            const height = container.clientHeight - 40;
+            
+            const g = svg
+                .attr('width', width)
+                .attr('height', height)
+                .append('g')
+                .attr('transform', `translate(${width/2}, ${height/2})`);
+            
+            // 创建力导向图
+            const simulation = d3.forceSimulation(graphData.nodes)
+                .force('link', d3.forceLink(graphData.links)
+                    .id(d => d.id)
+                    .distance(graphConfig.linkDistance))
+                .force('charge', d3.forceManyBody().strength(graphConfig.chargeStrength))
+                .force('center', d3.forceCenter(0, 0))
+                .force('collision', d3.forceCollide().radius(graphConfig.collisionRadius));
+            
+            // 绘制边
+            const link = g.append('g')
+                .selectAll('line')
+                .data(graphData.links)
+                .enter()
+                .append('line')
+                .attr('class', 'link');
+            
+            // 绘制节点
+            const node = g.append('g')
+                .selectAll('g')
+                .data(graphData.nodes)
+                .enter()
+                .append('g')
+                .attr('class', 'node')
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+            
+            // 节点圆圈
+            node.append('circle')
+                .attr('r', graphConfig.nodeRadius)
+                .attr('fill', d => {
+                    if (type === 'original') return '#4CAF50';
+                    if (type === 'anonymized') return '#2196F3';
+                    return '#999';
+                });
+            
+            // 节点标签
+            node.append('text')
+                .attr('dx', 12)
+                .attr('dy', 4)
+                .text(d => d.id);
+            
+            // 更新位置
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                
+                node.attr('transform', d => `translate(${d.x}, ${d.y})`);
+            });
+            
+            // 拖拽函数
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+            
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+            
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+            
+            // 保存simulation供后续使用
+            svg.node()._simulation = simulation;
+        }
+        
+        // 更新阶段显示
+        function updateStageDisplay(stage) {
+            document.querySelectorAll('.stage-item').forEach((item, index) => {
+                item.classList.remove('active', 'completed');
+                if (index < stage) {
+                    item.classList.add('completed');
+                } else if (index === stage) {
+                    item.classList.add('active');
+                }
+            });
+        }
+        
+        // 执行攻击演示
+        async function runAttackDemo() {
+            if (isAnimating) return;
+            isAnimating = true;
+            
+            document.getElementById('btn-start').disabled = true;
+            document.getElementById('btn-next').disabled = false;
+            
+            currentStage = 0;
+            matchedNodes.clear();
+            updateStats();
+            updateStageDisplay(0);
+            
+            showMessage('攻击演示开始...', 'info');
+        }
+        
+        // 执行下一步
+        async function nextStep() {
+            if (!isAnimating || !originalData) return;
+            
+            currentStage++;
+            updateStageDisplay(currentStage);
+            
+            switch(currentStage) {
+                case 1:
+                    await stage1_seedIdentification();
+                    break;
+                case 2:
+                    await stage2_structuralMatching();
+                    break;
+                case 3:
+                    await stage3_propagation();
+                    break;
+                case 4:
+                    await stage4_attributeInference();
+                    break;
+                case 5:
+                    await stage5_complete();
+                    document.getElementById('btn-next').disabled = true;
+                    break;
+            }
+        }
+        
+        // 阶段1：种子节点识别
+        async function stage1_seedIdentification() {
+            showMessage('🔍 识别种子节点：寻找具有独特结构特征的节点...', 'info');
+            
+            // 选择度数最高的几个节点作为种子
+            const sortedNodes = [...originalData.nodes].sort((a, b) => b.degree - a.degree);
+            seedNodes = sortedNodes.slice(0, 3).map(n => n.id);
+            
+            // 高亮种子节点
+            const svg = d3.select('#graph-attack');
+            await new Promise(resolve => {
+                setTimeout(() => {
+                    svg.selectAll('.node').each(function(d) {
+                        if (seedNodes.includes(d.id)) {
+                            d3.select(this).classed('seed', true);
+                            matchedNodes.add(d.id);
+                        }
+                    });
+                    updateStats();
+                    resolve();
+                }, 1000);
+            });
+            
+            showMessage(`✅ 已识别 ${seedNodes.length} 个种子节点`, 'success');
+        }
+        
+        // 阶段2：结构指纹匹配
+        async function stage2_structuralMatching() {
+            showMessage('🔬 结构指纹匹配：基于邻居结构匹配节点...', 'info');
+            
+            // 随机匹配一些节点
+            const unmatchedNodes = originalData.nodes
+                .filter(n => !matchedNodes.has(n.id))
+                .slice(0, 5);
+            
+            for (const node of unmatchedNodes) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const svg = d3.select('#graph-attack');
+                svg.selectAll('.node').each(function(d) {
+                    if (d.id === node.id) {
+                        d3.select(this).classed('matched', true);
+                        matchedNodes.add(d.id);
+                    }
+                });
+                
+                updateStats();
+            }
+            
+            showMessage(`✅ 通过结构匹配识别了 ${unmatchedNodes.length} 个节点`, 'success');
+        }
+        
+        // 阶段3：传播攻击
+        async function stage3_propagation() {
+            showMessage('🌊 传播攻击：利用已知节点推断邻居节点...', 'info');
+            
+            const unmatchedNodes = originalData.nodes
+                .filter(n => !matchedNodes.has(n.id))
+                .slice(0, 4);
+            
+            for (const node of unmatchedNodes) {
+                await new Promise(resolve => setTimeout(resolve, 600));
+                
+                const svg = d3.select('#graph-attack');
+                svg.selectAll('.node').each(function(d) {
+                    if (d.id === node.id) {
+                        d3.select(this).classed('matched', true);
+                        matchedNodes.add(d.id);
+                    }
+                });
+                
+                updateStats();
+            }
+            
+            showMessage(`✅ 传播攻击识别了 ${unmatchedNodes.length} 个邻居节点`, 'success');
+        }
+        
+        // 阶段4：属性推断
+        async function stage4_attributeInference() {
+            showMessage('🎯 属性推断：推断节点的敏感属性...', 'info');
+            
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            showMessage('✅ 已完成节点属性推断', 'success');
+        }
+        
+        // 阶段5：完成
+        async function stage5_complete() {
+            showMessage('🎉 攻击完成！成功识别并匹配了大部分节点', 'success');
+            
+            // 高亮所有匹配的节点
+            const svg = d3.select('#graph-attack');
+            svg.selectAll('.node').classed('matched', true);
+        }
+        
+        // 重置
+        function reset() {
+            isAnimating = false;
+            currentStage = 0;
+            matchedNodes.clear();
+            seedNodes = [];
+            
+            document.getElementById('btn-start').disabled = false;
+            document.getElementById('btn-next').disabled = true;
+            
+            updateStageDisplay(0);
+            updateStats();
+            initGraphs();
+            
+            showMessage('已重置演示', 'info');
+        }
+        
+        // 事件监听
+        document.getElementById('btn-start').addEventListener('click', runAttackDemo);
+        document.getElementById('btn-next').addEventListener('click', nextStep);
+        document.getElementById('btn-reset').addEventListener('click', reset);
+        
+        // 页面加载时初始化
+        window.addEventListener('load', () => {
+            loadData();
+        });
+        
+        // 窗口大小改变时重绘
+        window.addEventListener('resize', () => {
+            if (originalData && anonymizedData) {
+                initGraphs();
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+

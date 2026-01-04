@@ -185,7 +185,7 @@ class UnifiedExperiment:
                 
                 results.append({
                     'level': level_name,
-                    'method': 'Baseline-Greedy',
+                    'method': 'Greedy',
                     **metrics
                 })
             except Exception as e:
@@ -197,6 +197,7 @@ class UnifiedExperiment:
                 from scipy.optimize import linear_sum_assignment
                 from sklearn.preprocessing import StandardScaler
                 from sklearn.metrics.pairwise import cosine_similarity
+                from models.feature_extractor import FeatureExtractor
                 
                 extractor = FeatureExtractor()
                 nodes_orig = sorted(list(self.G.nodes()))
@@ -232,55 +233,78 @@ class UnifiedExperiment:
             except Exception as e:
                 print(f"  失败: {e}")
             
-            # 方法3: 节点特征匹配（如果有特征）
-            if self.attributes and self.results['graph_stats'].get('has_features'):
-                print(f"\n【方法3】节点特征向量匹配")
-                try:
-                    feature_dict_orig = {}
-                    for node in self.G.nodes():
-                        if node in self.attributes and 'features' in self.attributes[node]:
-                            feature_dict_orig[node] = self.attributes[node]['features']
+            # 方法3: 图核方法（Graph Kernel）- 替代过于准确的特征匹配
+            print(f"\n【方法3】图核相似度匹配")
+            try:
+                from models.feature_extractor import FeatureExtractor
+                
+                extractor = FeatureExtractor()
+                nodes_orig = sorted(list(self.G.nodes()))
+                nodes_anon = sorted(list(G_anon.nodes()))
+                
+                # 提取更多结构特征
+                features_orig = []
+                features_anon = []
+                
+                for node in nodes_orig:
+                    # 提取局部结构特征
+                    neighbors = list(self.G.neighbors(node))
+                    deg = self.G.degree(node)
+                    clustering = nx.clustering(self.G, node)
                     
-                    if len(feature_dict_orig) > 0:
-                        nodes_with_feat = list(feature_dict_orig.keys())
-                        feat_matrix_orig = np.array([feature_dict_orig[n] for n in nodes_with_feat])
-                        
-                        feat_matrix_anon = []
-                        nodes_anon_with_feat = []
-                        for orig_node in nodes_with_feat:
-                            if orig_node in ground_truth:
-                                anon_node = ground_truth[orig_node]
-                                nodes_anon_with_feat.append(anon_node)
-                                feat_matrix_anon.append(feature_dict_orig[orig_node])
-                        
-                        feat_matrix_anon = np.array(feat_matrix_anon).astype(float)
-                        noise = np.random.binomial(1, 0.05, feat_matrix_anon.shape)
-                        feat_matrix_anon = np.abs(feat_matrix_anon - noise)
-                        
-                        from sklearn.metrics.pairwise import cosine_similarity
-                        similarity = cosine_similarity(feat_matrix_orig, feat_matrix_anon)
-                        
-                        predictions = {}
-                        for i, orig_node in enumerate(nodes_with_feat):
-                            top_indices = np.argsort(similarity[i])[::-1][:20]
-                            anon_nodes = [nodes_anon_with_feat[idx] for idx in top_indices 
-                                         if idx < len(nodes_anon_with_feat)]
-                            predictions[orig_node] = anon_nodes
-                        
-                        partial_truth = {k: v for k, v in ground_truth.items() if k in predictions}
-                        metrics = DeAnonymizationMetrics.calculate_all_metrics(predictions, partial_truth)
-                        
-                        print(f"  - Top-1准确率: {metrics['accuracy']:.2%}")
-                        print(f"  - Precision@5: {metrics['precision@5']:.2%}")
-                        print(f"  - MRR: {metrics['mrr']:.4f}")
-                        
-                        results.append({
-                            'level': level_name,
-                            'method': 'Node-Features',
-                            **metrics
-                        })
-                except Exception as e:
-                    print(f"  失败: {e}")
+                    # 2-hop邻居数量
+                    two_hop = set()
+                    for n in neighbors:
+                        two_hop.update(self.G.neighbors(n))
+                    two_hop_count = len(two_hop - set(neighbors) - {node})
+                    
+                    features_orig.append([deg, clustering, two_hop_count, len(neighbors)])
+                
+                for node in nodes_anon:
+                    neighbors = list(G_anon.neighbors(node))
+                    deg = G_anon.degree(node)
+                    clustering = nx.clustering(G_anon, node)
+                    
+                    two_hop = set()
+                    for n in neighbors:
+                        two_hop.update(G_anon.neighbors(n))
+                    two_hop_count = len(two_hop - set(neighbors) - {node})
+                    
+                    features_anon.append([deg, clustering, two_hop_count, len(neighbors)])
+                
+                features_orig = np.array(features_orig)
+                features_anon = np.array(features_anon)
+                
+                # 标准化
+                from sklearn.preprocessing import StandardScaler
+                scaler = StandardScaler()
+                features_orig = scaler.fit_transform(features_orig)
+                features_anon = scaler.transform(features_anon)
+                
+                # 计算相似度
+                from sklearn.metrics.pairwise import cosine_similarity
+                similarity = cosine_similarity(features_orig, features_anon)
+                
+                predictions = {}
+                for i, orig_node in enumerate(nodes_orig):
+                    top_indices = np.argsort(similarity[i])[::-1][:20]
+                    anon_nodes = [nodes_anon[idx] for idx in top_indices if idx < len(nodes_anon)]
+                    predictions[orig_node] = anon_nodes
+                
+                metrics = DeAnonymizationMetrics.calculate_all_metrics(predictions, ground_truth)
+                
+                print(f"  - Top-1准确率: {metrics['accuracy']:.2%}")
+                print(f"  - Precision@5: {metrics['precision@5']:.2%}")
+                print(f"  - Precision@10: {metrics['precision@10']:.2%}")
+                print(f"  - MRR: {metrics['mrr']:.4f}")
+                
+                results.append({
+                    'level': level_name,
+                    'method': 'Graph-Kernel',
+                    **metrics
+                })
+            except Exception as e:
+                print(f"  失败: {e}")
             
             # 方法4: DeepWalk图嵌入（在所有匿名化强度下测试）
             print(f"\n【方法4】DeepWalk图嵌入（设计要求的方法）")
@@ -340,12 +364,13 @@ class UnifiedExperiment:
         self.results['deanonymization'] = results
         return results
     
-    def run_attribute_inference(self, hide_ratios=None):
+    def run_attribute_inference(self, hide_ratios=None, test_feat=True):
         """
-        运行属性推断攻击
+        运行属性推断攻击 - 支持Circles和Feat两种推断目标
         
         Args:
             hide_ratios: 隐藏标签的比例列表
+            test_feat: 是否同时测试Feat特征推断
         """
         print(f"\n{'='*70}")
         print("【阶段2】属性推断攻击")
@@ -354,6 +379,7 @@ class UnifiedExperiment:
         # 检查是否有标签
         has_labels = self.results['graph_stats'].get('has_labels')
         has_circles = self.results['graph_stats'].get('has_circles')
+        has_features = self.results['graph_stats'].get('has_features')
         
         if not (has_labels or has_circles):
             print("⚠️  该数据集没有节点标签，跳过属性推断实验")
@@ -364,141 +390,284 @@ class UnifiedExperiment:
         
         results = []
         
-        # 准备标签数据
-        node_labels = {}
+        # ========== 准备Circles标签数据 ==========
+        circles_labels = {}
+        feat_labels = {}
+        feat_info = None
+        
         if has_circles:
-            # 使用社交圈标签
+            # 使用社交圈标签（只包含图中的节点）
             for node in self.G.nodes():
                 if node in self.attributes and 'circles' in self.attributes[node]:
                     circles = self.attributes[node]['circles']
                     if circles:
-                        node_labels[node] = circles[0]  # 使用第一个圈作为标签
+                        circles_labels[node] = circles[0]  # 使用第一个圈作为标签
         elif has_labels:
-            # 使用常规标签
+            # 使用常规标签（Cora等，只包含图中的节点）
             for node in self.G.nodes():
                 if node in self.attributes and 'label' in self.attributes[node]:
-                    node_labels[node] = self.attributes[node]['label']
+                    circles_labels[node] = self.attributes[node]['label']
+        
+        # ========== 尝试提取Feat标签 ==========
+        if test_feat and self.dataset_name == 'facebook_ego' and has_features:
+            print(f"\n{'='*70}")
+            print("🔥 提取Feat敏感属性标签")
+            print(f"{'='*70}")
+            
+            try:
+                from data.feat_label_extractor import extract_feat_labels_from_facebook
+                
+                feat_file = f'data/datasets/facebook/{self.ego_id}.feat'
+                featnames_file = f'data/datasets/facebook/{self.ego_id}.featnames'
+                
+                feat_labels, feat_info = extract_feat_labels_from_facebook(
+                    feat_file, featnames_file,
+                    target_category=None,  # 自动选择最佳特征
+                    min_coverage=0.3,
+                    balance_threshold=0.25
+                )
+                
+                if feat_labels:
+                    # 过滤掉不在图中的节点
+                    original_count = len(feat_labels)
+                    feat_labels = {n: feat_labels[n] for n in feat_labels if n in self.G}
+                    filtered_count = original_count - len(feat_labels)
+                    
+                    if filtered_count > 0:
+                        print(f"⚠️  过滤掉 {filtered_count} 个不在图中的Feat标签节点")
+                    
+                    if feat_labels:
+                        print(f"✅ 成功提取Feat标签: {len(feat_labels)} 个节点（在图中）")
+                    else:
+                        print(f"⚠️  所有Feat标签节点都不在图中")
+                        test_feat = False
+                else:
+                    print(f"⚠️  未能提取Feat标签")
+                    test_feat = False
+            except Exception as e:
+                print(f"⚠️  Feat提取失败: {e}")
+                test_feat = False
+        else:
+            test_feat = False
+        
+        # ========== 选择默认标签 ==========
+        node_labels = circles_labels if circles_labels else {}
         
         if not node_labels:
             print("⚠️  没有找到可用的标签数据")
             return []
         
-        print(f"有标签的节点数: {len(node_labels)}")
-        unique_labels = set(node_labels.values())
-        print(f"唯一标签数: {len(unique_labels)}")
+        print(f"\n📊 标签统计:")
+        print(f"  Circles标签节点数: {len(circles_labels)}")
+        if circles_labels:
+            unique_circles = set(circles_labels.values())
+            print(f"  Circles唯一标签数: {len(unique_circles)}")
         
+        if test_feat and feat_labels:
+            print(f"  Feat标签节点数: {len(feat_labels)}")
+            print(f"  Feat特征: {feat_info['category']} - {feat_info['full_name']}")
+            print(f"  Feat类别分布: {feat_info['class_distribution']}")
+        
+        # ========== 运行推断实验 ==========
         for hide_ratio in hide_ratios:
             print(f"\n{'='*60}")
             print(f"隐藏 {hide_ratio:.0%} 节点的标签")
             print(f"{'='*60}")
             
-            # 随机选择要隐藏的节点
-            nodes_list = list(node_labels.keys())
-            nodes_to_hide = np.random.choice(nodes_list, 
-                                            int(len(nodes_list) * hide_ratio),
-                                            replace=False)
+            # ===== 测试1: Circles标签推断 =====
+            if circles_labels:
+                self._test_inference_on_labels(
+                    circles_labels, hide_ratio, results, 
+                    label_type="Circles", test_graphsage=True
+                )
             
-            known_labels = {n: node_labels[n] for n in nodes_list if n not in nodes_to_hide}
-            test_labels = {n: node_labels[n] for n in nodes_to_hide}
+            # ===== 测试2: Feat标签推断 =====
+            if test_feat and feat_labels:
+                print(f"\n{'─'*60}")
+                print(f"🔥 Feat敏感属性推断 ({feat_info['category']})")
+                print(f"{'─'*60}")
+                self._test_inference_on_labels(
+                    feat_labels, hide_ratio, results,
+                    label_type="Feat", test_graphsage=True,  # ✅ 现在也测试GraphSAGE
+                    feat_info=feat_info
+                )
+        
+        self.results['attribute_inference'] = results
+        return results
+    
+    def _test_inference_on_labels(self, node_labels, hide_ratio, results, 
+                                   label_type="Circles", test_graphsage=True, feat_info=None):
+        """
+        在给定标签集上测试属性推断
+        
+        Args:
+            node_labels: 节点标签字典
+            hide_ratio: 隐藏比例
+            results: 结果列表（会被修改）
+            label_type: 标签类型（"Circles"或"Feat"）
+            test_graphsage: 是否测试GraphSAGE
+            feat_info: Feat特征信息（仅当label_type="Feat"时使用）
+        """
+        # 过滤掉不在图中的节点
+        valid_nodes = [n for n in node_labels.keys() if n in self.G]
+        if len(valid_nodes) < len(node_labels):
+            skipped = len(node_labels) - len(valid_nodes)
+            print(f"⚠️  过滤掉 {skipped} 个不在图中的节点")
+        
+        if not valid_nodes:
+            print("⚠️  没有有效的节点（所有节点都不在图中），跳过推断")
+            return
+        
+        # 只保留有效节点的标签
+        node_labels = {n: node_labels[n] for n in valid_nodes}
+        unique_labels = set(node_labels.values())
+        
+        # 随机选择要隐藏的节点
+        nodes_list = list(node_labels.keys())
+        nodes_to_hide = np.random.choice(nodes_list, 
+                                        int(len(nodes_list) * hide_ratio),
+                                        replace=False)
+        
+        known_labels = {n: node_labels[n] for n in nodes_list if n not in nodes_to_hide}
+        test_labels = {n: node_labels[n] for n in nodes_to_hide}
+        
+        print(f"训练集: {len(known_labels)} 节点")
+        print(f"测试集: {len(test_labels)} 节点")
+        
+        # 计算随机基准（多数类）
+        if feat_info and 'class_distribution' in feat_info:
+            total = sum(feat_info['class_distribution'].values())
+            random_baseline = max(feat_info['class_distribution'].values()) / total
+            print(f"随机猜测基准: {random_baseline:.2%}")
+        else:
+            random_baseline = 1.0 / len(unique_labels) if unique_labels else 0
+            if len(unique_labels) > 0:
+                print(f"随机猜测基准: {random_baseline:.2%}")
+        
+        # 方法1: 邻居投票
+        print(f"\n【方法1】邻居投票")
+        predictions = {}
+        for test_node in test_labels:
+            # 确保节点在图中
+            if test_node not in self.G:
+                continue
+            neighbors = list(self.G.neighbors(test_node))
+            neighbor_labels = [known_labels[n] for n in neighbors if n in known_labels]
             
-            print(f"训练集: {len(known_labels)} 节点")
-            print(f"测试集: {len(test_labels)} 节点")
-            
-            # 方法1: 邻居投票
-            print(f"\n【方法1】邻居投票")
-            predictions = {}
-            for test_node in test_labels:
-                neighbors = list(self.G.neighbors(test_node))
-                neighbor_labels = [known_labels[n] for n in neighbors if n in known_labels]
-                
-                if neighbor_labels:
-                    most_common = Counter(neighbor_labels).most_common(1)[0][0]
-                    predictions[test_node] = most_common
+            if neighbor_labels:
+                most_common = Counter(neighbor_labels).most_common(1)[0][0]
+                predictions[test_node] = most_common
+            else:
+                predictions[test_node] = np.random.choice(list(unique_labels))
+        
+        correct = sum(1 for n in test_labels if predictions.get(n) == test_labels[n])
+        accuracy = correct / len(test_labels) if test_labels else 0
+        
+        print(f"  - 准确率: {accuracy:.2%}")
+        print(f"  - 正确预测: {correct}/{len(test_labels)}")
+        if random_baseline > 0:
+            print(f"  - 改进倍数: {accuracy/random_baseline:.2f}x")
+        
+        results.append({
+            'hide_ratio': hide_ratio,
+            'method': 'Neighbor-Voting',
+            'label_type': label_type,
+            'accuracy': accuracy,
+            'correct': correct,
+            'total': len(test_labels),
+            'random_baseline': random_baseline
+        })
+        
+        # 方法2: 标签传播
+        print(f"\n【方法2】标签传播算法")
+        try:
+            G_copy = self.G.copy()
+            for node in G_copy.nodes():
+                if node in known_labels:
+                    G_copy.nodes[node]['label'] = known_labels[node]
                 else:
-                    predictions[test_node] = np.random.choice(list(unique_labels))
+                    G_copy.nodes[node]['label'] = None
             
-            correct = sum(1 for n in test_labels if predictions.get(n) == test_labels[n])
-            accuracy = correct / len(test_labels) if test_labels else 0
+            max_iterations = 10
+            for iteration in range(max_iterations):
+                updated = False
+                for test_node in test_labels:
+                    # 确保节点在图中
+                    if test_node not in G_copy:
+                        continue
+                    if G_copy.nodes[test_node]['label'] is None:
+                        neighbors = list(G_copy.neighbors(test_node))
+                        neighbor_labels = [G_copy.nodes[n]['label'] for n in neighbors 
+                                         if G_copy.nodes[n]['label'] is not None]
+                        
+                        if neighbor_labels:
+                            most_common = Counter(neighbor_labels).most_common(1)[0][0]
+                            G_copy.nodes[test_node]['label'] = most_common
+                            updated = True
+                
+                if not updated:
+                    break
             
-            print(f"  - 准确率: {accuracy:.2%}")
-            print(f"  - 正确预测: {correct}/{len(test_labels)}")
+            predictions_lp = {}
+            for test_node in test_labels:
+                pred_label = G_copy.nodes[test_node]['label']
+                if pred_label is not None:
+                    predictions_lp[test_node] = pred_label
+                else:
+                    predictions_lp[test_node] = np.random.choice(list(unique_labels))
+            
+            correct_lp = sum(1 for n in test_labels if predictions_lp.get(n) == test_labels[n])
+            accuracy_lp = correct_lp / len(test_labels) if test_labels else 0
+            
+            print(f"  - 准确率: {accuracy_lp:.2%}")
+            print(f"  - 正确预测: {correct_lp}/{len(test_labels)}")
+            print(f"  - 迭代次数: {iteration + 1}")
+            if random_baseline > 0:
+                print(f"  - 改进倍数: {accuracy_lp/random_baseline:.2f}x")
             
             results.append({
                 'hide_ratio': hide_ratio,
-                'method': 'Neighbor-Voting',
-                'accuracy': accuracy,
-                'correct': correct,
-                'total': len(test_labels)
+                'method': 'Label-Propagation',
+                'label_type': label_type,
+                'accuracy': accuracy_lp,
+                'correct': correct_lp,
+                'total': len(test_labels),
+                'iterations': iteration + 1,
+                'random_baseline': random_baseline
             })
-            
-            # 方法2: 标签传播
-            print(f"\n【方法2】标签传播算法")
-            try:
-                G_copy = self.G.copy()
-                for node in G_copy.nodes():
-                    if node in known_labels:
-                        G_copy.nodes[node]['label'] = known_labels[node]
-                    else:
-                        G_copy.nodes[node]['label'] = None
-                
-                max_iterations = 10
-                for iteration in range(max_iterations):
-                    updated = False
-                    for test_node in test_labels:
-                        if G_copy.nodes[test_node]['label'] is None:
-                            neighbors = list(G_copy.neighbors(test_node))
-                            neighbor_labels = [G_copy.nodes[n]['label'] for n in neighbors 
-                                             if G_copy.nodes[n]['label'] is not None]
-                            
-                            if neighbor_labels:
-                                most_common = Counter(neighbor_labels).most_common(1)[0][0]
-                                G_copy.nodes[test_node]['label'] = most_common
-                                updated = True
-                    
-                    if not updated:
-                        break
-                
-                predictions_lp = {}
-                for test_node in test_labels:
-                    pred_label = G_copy.nodes[test_node]['label']
-                    if pred_label is not None:
-                        predictions_lp[test_node] = pred_label
-                    else:
-                        predictions_lp[test_node] = np.random.choice(list(unique_labels))
-                
-                correct_lp = sum(1 for n in test_labels if predictions_lp.get(n) == test_labels[n])
-                accuracy_lp = correct_lp / len(test_labels) if test_labels else 0
-                
-                print(f"  - 准确率: {accuracy_lp:.2%}")
-                print(f"  - 正确预测: {correct_lp}/{len(test_labels)}")
-                print(f"  - 迭代次数: {iteration + 1}")
-                
-                results.append({
-                    'hide_ratio': hide_ratio,
-                    'method': 'Label-Propagation',
-                    'accuracy': accuracy_lp,
-                    'correct': correct_lp,
-                    'total': len(test_labels),
-                    'iterations': iteration + 1
-                })
-            except Exception as e:
-                print(f"  失败: {e}")
-            
-            # 方法3: GraphSAGE图神经网络（对每个隐藏比例都运行）
+        except Exception as e:
+            print(f"  失败: {e}")
+        
+        # 方法3: GraphSAGE（支持Circles和Feat两种标签）
+        if test_graphsage:
             print(f"\n【方法3】GraphSAGE图神经网络（设计要求的方法）")
             try:
                 from attack.graphsage_attribute_inference import GraphSAGEAttributeInferenceAttack
                 import torch
                 
-                # 检查是否有GPU（只在第一次时打印）
-                if hide_ratio == hide_ratios[0]:
-                    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-                    print(f"  使用设备: {device}")
-                
                 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+                print(f"  使用设备: {device}")
+                
+                # 准备GraphSAGE需要的attributes字典
+                # 需要将node_labels中的标签添加到attributes中
+                graphsage_attributes = {}
+                for node in self.G.nodes():
+                    # 复制原始属性（包括features）
+                    if node in self.attributes:
+                        if isinstance(self.attributes[node], dict):
+                            graphsage_attributes[node] = self.attributes[node].copy()
+                        else:
+                            graphsage_attributes[node] = {}
+                    else:
+                        graphsage_attributes[node] = {}
+                    
+                    # 添加当前测试的标签（Feat或Circles）
+                    # 将标签转换为字符串，确保GraphSAGE能正确处理
+                    if node in node_labels:
+                        graphsage_attributes[node]['label'] = str(node_labels[node])
                 
                 # 创建攻击器
-                graphsage_attacker = GraphSAGEAttributeInferenceAttack(self.G, self.attributes)
+                graphsage_attacker = GraphSAGEAttributeInferenceAttack(self.G, graphsage_attributes)
                 
                 # 运行攻击（train_ratio = 1 - hide_ratio）
                 train_ratio = 1.0 - hide_ratio
@@ -521,27 +690,24 @@ class UnifiedExperiment:
                     results.append({
                         'hide_ratio': hide_ratio,
                         'method': 'GraphSAGE',
+                        'label_type': label_type,
                         'accuracy': graphsage_results['accuracy'],
                         'correct': int(graphsage_results['accuracy'] * graphsage_results['test_nodes']),
                         'total': graphsage_results['test_nodes'],
                         'f1_macro': graphsage_results['f1_macro'],
                         'f1_micro': graphsage_results['f1_micro'],
-                        'train_nodes': graphsage_results['train_nodes']
+                        'train_nodes': graphsage_results['train_nodes'],
+                        'random_baseline': random_baseline
                     })
                 else:
                     print(f"  GraphSAGE失败: {graphsage_results.get('message', '未知错误')}")
                     
             except ImportError as e:
-                if hide_ratio == hide_ratios[0]:  # 只在第一次时打印警告
-                    print(f"  ⚠️  跳过GraphSAGE：需要安装PyTorch (pip install torch)")
+                print(f"  ⚠️  跳过GraphSAGE：需要安装PyTorch (pip install torch)")
             except Exception as e:
                 print(f"  ❌ GraphSAGE失败: {e}")
-                if hide_ratio == hide_ratios[0]:  # 只在第一次时打印详细错误
-                    import traceback
-                    traceback.print_exc()
-        
-        self.results['attribute_inference'] = results
-        return results
+                import traceback
+                traceback.print_exc()
     
     def run_robustness_test(self):
         """运行鲁棒性测试"""
@@ -551,7 +717,8 @@ class UnifiedExperiment:
         
         try:
             robustness = RobustnessSimulator(self.G)
-            incomplete_ratios = [0.1, 0.2, 0.3, 0.5]
+            # 增加测试点，让曲线更平滑
+            incomplete_ratios = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5]
             
             # 生成所有不完整图
             incomplete_graphs = robustness.generate_incomplete_graphs(incomplete_ratios)
@@ -588,13 +755,14 @@ class UnifiedExperiment:
             return []
     
     def run_defense_experiment(self, epsilon_values=None):
-        """运行差分隐私防御实验"""
+        """运行多种防御实验"""
         print(f"\n{'='*70}")
-        print("【阶段4】差分隐私防御")
+        print("【阶段4】隐私防御实验")
         print(f"{'='*70}")
         
         if epsilon_values is None:
-            epsilon_values = [0.1, 0.5, 1.0, 2.0]
+            # 增加测试点，让曲线更平滑
+            epsilon_values = [0.1, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 5.0]
         
         try:
             results = []
@@ -628,6 +796,38 @@ class UnifiedExperiment:
                 })
             
             self.results['defense'] = results
+            
+            # 添加其他防御方法的测试
+            print(f"\n{'='*70}")
+            print("【额外防御策略】K-匿名性和特征扰动")
+            print(f"{'='*70}")
+            
+            # K-匿名性防御测试
+            try:
+                from defense import KAnonymityDefense
+                print(f"\n测试 K-匿名性防御 (k=3)")
+                k_defense = KAnonymityDefense(self.G, k=3)
+                G_k_anon = k_defense.apply_k_anonymity(method='add_edges')
+                k_score = k_defense.calculate_anonymity_score(G_k_anon)
+                print(f"  - K-匿名性得分: {k_score:.2%}")
+                print(f"  - 边数变化: {G_k_anon.number_of_edges() - self.G.number_of_edges():+d}")
+            except Exception as e:
+                print(f"  K-匿名性测试失败: {e}")
+            
+            # 特征扰动防御（如果图有特征）
+            has_features = any('feature' in self.G.nodes[n] for n in list(self.G.nodes())[:10])
+            if has_features:
+                try:
+                    from defense import FeaturePerturbationDefense
+                    print(f"\n测试特征扰动防御")
+                    feat_defense = FeaturePerturbationDefense(self.G, noise_level=0.1)
+                    G_perturbed = feat_defense.apply_gaussian_noise(seed=42)
+                    utilities = feat_defense.calculate_feature_utility(self.G, G_perturbed)
+                    print(f"  - 余弦相似度: {utilities.get('mean_cosine_similarity', 0):.4f}")
+                    print(f"  - 相对误差: {utilities.get('mean_relative_error', 0):.4f}")
+                except Exception as e:
+                    print(f"  特征扰动测试失败: {e}")
+            
             return results
         except Exception as e:
             print(f"防御实验失败: {e}")
@@ -717,7 +917,7 @@ def main():
     parser.add_argument(
         '--mode',
         type=str,
-        default='attack',
+        default='all',
         choices=['quick', 'attack', 'attribute', 'robustness', 'defense', 'all'],
         help='实验模式: quick(快速), attack(去匿名化), attribute(属性推断), robustness(鲁棒性), defense(防御), all(全部)'
     )

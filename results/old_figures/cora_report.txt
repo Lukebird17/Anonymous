@@ -1,0 +1,86 @@
+======================================================================
+Experiment Results Summary Report
+Generated: 2026-01-03 22:32:10
+Dataset: cora
+Results File: results/unified/cora_20260103_222021.json
+======================================================================
+
+[Graph Statistics]
+  Nodes: 2708
+  Edges: 5278
+  Avg Degree: 3.90
+  Density: 0.001440
+
+[De-anonymization Attack Results]
+
+Mild - Greedy:
+  Top-1 Accuracy: 25.26%
+  Precision@5: 46.42%
+  MRR: 0.3504
+  Improvement: 684x
+
+Mild - Hungarian:
+  Top-1 Accuracy: 22.49%
+  Precision@5: 44.28%
+  MRR: 0.3242
+  Improvement: 609x
+
+Mild - Graph-Kernel:
+  Top-1 Accuracy: 14.44%
+  Precision@5: 40.92%
+  MRR: 0.2631
+  Improvement: 391x
+
+Mild - DeepWalk:
+  Top-1 Accuracy: 0.00%
+  Precision@5: 0.22%
+  MRR: 0.0011
+  Improvement: 0x
+
+Moderate - Greedy:
+  Top-1 Accuracy: 7.64%
+  Precision@5: 21.94%
+  MRR: 0.1445
+  Improvement: 207x
+
+Moderate - Hungarian:
+  Top-1 Accuracy: 9.79%
+  Precision@5: 23.82%
+  MRR: 0.1638
+  Improvement: 265x
+
+Moderate - Graph-Kernel:
+  Top-1 Accuracy: 7.72%
+  Precision@5: 24.30%
+  MRR: 0.1553
+  Improvement: 209x
+
+Moderate - DeepWalk:
+  Top-1 Accuracy: 0.18%
+  Precision@5: 0.26%
+  MRR: 0.0027
+  Improvement: 5x
+
+Strong - Greedy:
+  Top-1 Accuracy: 4.25%
+  Precision@5: 12.00%
+  MRR: 0.0819
+  Improvement: 115x
+
+Strong - Hungarian:
+  Top-1 Accuracy: 3.32%
+  Precision@5: 11.12%
+  MRR: 0.0729
+  Improvement: 90x
+
+Strong - Graph-Kernel:
+  Top-1 Accuracy: 3.91%
+  Precision@5: 13.22%
+  MRR: 0.0872
+  Improvement: 106x
+
+Strong - DeepWalk:
+  Top-1 Accuracy: 0.04%
+  Precision@5: 0.15%
+  MRR: 0.0014
+  Improvement: 1x

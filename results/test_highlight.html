@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>高亮测试</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        :root {
+            --color-orange: #FF9800;
+            --color-green: #4CAF50;
+            --color-blue: #2196F3;
+        }
+        
+        svg {
+            border: 1px solid #ccc;
+            background: #fafafa;
+        }
+        
+        .node {
+            stroke: white;
+            stroke-width: 2px;
+            cursor: pointer;
+            transition: stroke 0.3s, stroke-width 0.3s, filter 0.3s;
+        }
+        
+        .node.highlighted {
+            stroke: var(--color-orange) !important;
+            stroke-width: 5px !important;
+            filter: drop-shadow(0 0 10px var(--color-orange)) !important;
+        }
+        
+        .node.matched-success {
+            stroke: var(--color-green) !important;
+            stroke-width: 6px !important;
+            filter: drop-shadow(0 0 8px var(--color-green)) !important;
+        }
+        
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.3;
+            stroke-width: 1px;
+        }
+        
+        .link.highlighted {
+            stroke: var(--color-orange) !important;
+            stroke-width: 3px !important;
+            stroke-opacity: 0.8 !important;
+        }
+        
+        .link.walk-path {
+            stroke: var(--color-blue) !important;
+            stroke-width: 4px !important;
+            stroke-opacity: 0.9 !important;
+        }
+        
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>D3.js 高亮测试</h1>
+    <button onclick="testHighlight()">测试节点高亮</button>
+    <button onclick="testEdgeHighlight()">测试边高亮</button>
+    <button onclick="resetHighlight()">重置</button>
+    <div id="container"></div>
+    
+    <script>
+        const width = 800;
+        const height = 600;
+        
+        // 创建简单的测试数据
+        const nodes = [
+            {id: 0, index: 0},
+            {id: 1, index: 1},
+            {id: 2, index: 2},
+            {id: 3, index: 3},
+            {id: 4, index: 4}
+        ];
+        
+        const links = [
+            {source: 0, target: 1},
+            {source: 0, target: 2},
+            {source: 1, target: 3},
+            {source: 2, target: 4}
+        ];
+        
+        // 创建SVG
+        const svg = d3.select('#container')
+            .append('svg')
+            .attr('width', width)
+            .attr('height', height);
+        
+        const g = svg.append('g');
+        
+        // 力导向布局
+        const simulation = d3.forceSimulation(nodes)
+            .force('link', d3.forceLink(links).id(d => d.id).distance(100))
+            .force('charge', d3.forceManyBody().strength(-300))
+            .force('center', d3.forceCenter(width/2, height/2));
+        
+        // 绘制边
+        const link = g.selectAll('line')
+            .data(links)
+            .join('line')
+            .attr('class', 'link');
+        
+        // 绘制节点
+        const node = g.selectAll('circle')
+            .data(nodes)
+            .join('circle')
+            .attr('class', 'node')
+            .attr('r', 20)
+            .attr('fill', '#2196F3');
+        
+        // 更新位置
+        simulation.on('tick', () => {
+            link
+                .attr('x1', d => d.source.x)
+                .attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x)
+                .attr('y2', d => d.target.y);
+            
+            node
+                .attr('cx', d => d.x)
+                .attr('cy', d => d.y);
+        });
+        
+        // 测试函数
+        function testHighlight() {
+            console.log('测试节点高亮...');
+            // 高亮第一个和第二个节点
+            node.classed('highlighted', (d, i) => i === 0 || i === 1);
+            node.classed('matched-success', (d, i) => i === 2);
+            
+            // 打印节点class
+            node.each(function(d, i) {
+                console.log(`节点${i} class:`, this.getAttribute('class'));
+            });
+        }
+        
+        function testEdgeHighlight() {
+            console.log('测试边高亮...');
+            // 高亮前两条边
+            link.classed('highlighted', (d, i) => i === 0);
+            link.classed('walk-path', (d, i) => i === 1);
+            
+            // 打印边class
+            link.each(function(d, i) {
+                console.log(`边${i} class:`, this.getAttribute('class'));
+            });
+        }
+        
+        function resetHighlight() {
+            console.log('重置高亮...');
+            node.classed('highlighted matched-success', false);
+            link.classed('highlighted walk-path', false);
+        }
+    </script>
+</body>
+</html>
+
+
+

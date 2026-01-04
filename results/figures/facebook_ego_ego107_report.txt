@@ -1,0 +1,86 @@
+======================================================================
+Experiment Results Summary Report
+Generated: 2026-01-04 19:36:15
+Dataset: facebook_ego
+Results File: results/unified/facebook_ego_ego107_20260104_185924.json
+======================================================================
+
+[Graph Statistics]
+  Nodes: 1034
+  Edges: 26749
+  Avg Degree: 51.74
+  Density: 0.050086
+
+[De-anonymization Attack Results]
+
+Mild - Greedy:
+  Top-1 Accuracy: 19.44%
+  Precision@5: 47.29%
+  MRR: 0.3205
+  Improvement: 201x
+
+Mild - Hungarian:
+  Top-1 Accuracy: 7.93%
+  Precision@5: 22.92%
+  MRR: 0.1609
+  Improvement: 82x
+
+Mild - Graph-Kernel:
+  Top-1 Accuracy: 7.64%
+  Precision@5: 20.70%
+  MRR: 0.1467
+  Improvement: 79x
+
+Mild - DeepWalk:
+  Top-1 Accuracy: 0.29%
+  Precision@5: 0.48%
+  MRR: 0.0043
+  Improvement: 3x
+
+Moderate - Greedy:
+  Top-1 Accuracy: 7.16%
+  Precision@5: 24.08%
+  MRR: 0.1564
+  Improvement: 74x
+
+Moderate - Hungarian:
+  Top-1 Accuracy: 1.35%
+  Precision@5: 7.45%
+  MRR: 0.0472
+  Improvement: 14x
+
+Moderate - Graph-Kernel:
+  Top-1 Accuracy: 0.97%
+  Precision@5: 4.35%
+  MRR: 0.0311
+  Improvement: 10x
+
+Moderate - DeepWalk:
+  Top-1 Accuracy: 0.10%
+  Precision@5: 0.68%
+  MRR: 0.0039
+  Improvement: 1x
+
+Strong - Greedy:
+  Top-1 Accuracy: 3.58%
+  Precision@5: 12.57%
+  MRR: 0.0841
+  Improvement: 37x
+
+Strong - Hungarian:
+  Top-1 Accuracy: 0.87%
+  Precision@5: 3.29%
+  MRR: 0.0243
+  Improvement: 9x
+
+Strong - Graph-Kernel:
+  Top-1 Accuracy: 0.39%
+  Precision@5: 1.74%
+  MRR: 0.0140
+  Improvement: 4x
+
+Strong - DeepWalk:
+  Top-1 Accuracy: 0.29%
+  Precision@5: 0.77%
+  MRR: 0.0060
+  Improvement: 3x

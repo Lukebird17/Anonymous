@@ -1,0 +1,1976 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图匿名化攻击动画演示系统</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        :root {
+            --color-blue: #2196F3;
+            --color-orange: #FF9800;
+            --color-green: #4CAF50;
+            --color-red: #f44336;
+            --color-gray: #9E9E9E;
+            --color-attr-a: #e74c3c;
+            --color-attr-b: #3498db;
+            --color-attr-c: #2ecc71;
+        }
+        
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        header h1 {
+            font-size: 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .main-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            overflow: hidden;
+        }
+        
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .viz-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .viz-card.main {
+            flex: 2;
+            min-height: 0;
+        }
+        
+        .viz-card.info {
+            flex: 1;
+            min-height: 0;
+        }
+        
+        .viz-card h2 {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #f0f0f0;
+        }
+        
+        .viz-content {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .control-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow-y: auto;
+        }
+        
+        .control-section {
+            margin-bottom: 25px;
+        }
+        
+        .control-section h3 {
+            font-size: 1.1em;
+            color: #555;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .stage-btn {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .stage-btn:hover {
+            border-color: var(--color-blue);
+            background: #e3f2fd;
+        }
+        
+        .stage-btn.active {
+            background: linear-gradient(135deg, var(--color-blue), #1976D2);
+            color: white;
+            border-color: var(--color-blue);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+        }
+        
+        .method-grid {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .method-btn {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.95em;
+            text-align: left;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .method-btn:hover {
+            border-color: var(--color-blue);
+            background: #e3f2fd;
+            transform: translateX(5px);
+        }
+        
+        .method-btn.active {
+            background: linear-gradient(135deg, var(--color-blue), #1976D2);
+            color: white;
+            border-color: var(--color-blue);
+            box-shadow: 0 8px 20px rgba(33, 150, 243, 0.4);
+        }
+        
+        .method-btn .method-name {
+            font-weight: 600;
+            font-size: 1.05em;
+        }
+        
+        .method-btn .method-desc {
+            font-size: 0.85em;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        
+        .principle-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9em;
+            line-height: 1.7;
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        
+        .principle-box .step {
+            margin: 12px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+        
+        .principle-box .step::before {
+            content: "▶";
+            position: absolute;
+            left: 0;
+            color: var(--color-orange);
+            font-size: 0.8em;
+        }
+        
+        .formula {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            border-left: 4px solid var(--color-blue);
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .ctrl-btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .ctrl-btn.play {
+            background: linear-gradient(135deg, var(--color-blue), #1976D2);
+            color: white;
+        }
+        
+        .ctrl-btn.play:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(33, 150, 243, 0.4);
+        }
+        
+        .ctrl-btn.pause {
+            background: linear-gradient(135deg, var(--color-orange), #F57C00);
+            color: white;
+        }
+        
+        .ctrl-btn.reset {
+            background: #e0e0e0;
+        }
+        
+        .ctrl-btn.reset:hover {
+            background: #bdbdbd;
+        }
+        
+        /* 图可视化样式 */
+        .graph-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: 100%;
+        }
+        
+        .graph-pane {
+            position: relative;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .graph-pane h3 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            margin: 0;
+            font-size: 1em;
+            text-align: center;
+        }
+        
+        .graph-pane.original h3 {
+            background: linear-gradient(135deg, var(--color-blue), #1976D2);
+        }
+        
+        .graph-pane.anon h3 {
+            background: linear-gradient(135deg, var(--color-gray), #757575);
+        }
+        
+        .graph-svg {
+            flex: 1;
+            background: #fafafa;
+        }
+        
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* 节点样式 */
+        .node {
+            stroke: white;
+            stroke-width: 2.5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .node.unknown {
+            fill: var(--color-gray) !important;
+            opacity: 0.6;
+        }
+        
+        .node.highlighted {
+            stroke: var(--color-orange);
+            stroke-width: 5px;
+            filter: drop-shadow(0 0 10px var(--color-orange));
+        }
+        
+        .node.matched-success {
+            stroke: var(--color-green);
+            stroke-width: 6px;
+            filter: drop-shadow(0 0 8px var(--color-green));
+        }
+        
+        .node.matched-fail {
+            stroke: var(--color-red);
+            stroke-width: 6px;
+            filter: drop-shadow(0 0 8px var(--color-red));
+        }
+        
+        .node.attr-A { fill: var(--color-attr-a); }
+        .node.attr-B { fill: var(--color-attr-b); }
+        .node.attr-C { fill: var(--color-attr-c); }
+        
+        /* 边样式 */
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.3;
+            stroke-width: 1px;
+        }
+        
+        .link.highlighted {
+            stroke: var(--color-orange);
+            stroke-width: 3px;
+            stroke-opacity: 0.8;
+        }
+        
+        .link.walk-path {
+            stroke: var(--color-blue);
+            stroke-width: 4px;
+            stroke-opacity: 0.9;
+            animation: dash 2s linear infinite;
+        }
+        
+        .link.removed {
+            stroke: var(--color-red);
+            stroke-width: 2px;
+            stroke-dasharray: 5,5;
+            stroke-opacity: 0.7;
+        }
+        
+        .link.added {
+            stroke: var(--color-green);
+            stroke-width: 2px;
+            stroke-dasharray: 5,5;
+            stroke-opacity: 0.7;
+        }
+        
+        @keyframes dash {
+            to { stroke-dashoffset: -20; }
+        }
+        
+        /* 匹配连线 */
+        .match-line {
+            stroke: var(--color-green);
+            stroke-width: 3px;
+            stroke-dasharray: 8,4;
+            opacity: 0.8;
+            animation: dash 1s linear infinite;
+        }
+        
+        /* 标签 */
+        .node-label {
+            font-size: 10px;
+            font-weight: bold;
+            pointer-events: none;
+            text-anchor: middle;
+            fill: #333;
+            text-shadow: 0 0 3px white, 0 0 3px white;
+        }
+        
+        /* 提示框 */
+        .tooltip {
+            position: absolute;
+            padding: 12px 15px;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            border-radius: 8px;
+            font-size: 13px;
+            pointer-events: none;
+            z-index: 10000;
+            display: none;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            max-width: 300px;
+        }
+        
+        /* 动画状态显示 */
+        .animation-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            z-index: 100;
+        }
+        
+        /* 图例 */
+        .legend {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background: rgba(255,255,255,0.95);
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        /* 信息面板样式 */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .info-item {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .info-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: var(--color-blue);
+            margin-bottom: 5px;
+        }
+        
+        .info-label {
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #bbb;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 图匿名化攻击动画演示系统</h1>
+            <p style="color: #666; margin-top: 5px;">
+                真实算法原理 · 动画演示 · 交互探索
+            </p>
+        </header>
+        
+        <div class="main-content">
+            <!-- 左侧可视化区域 -->
+            <div class="left-panel">
+                <!-- 主图可视化 -->
+                <div class="viz-card main">
+                    <h2 id="viz-title">图网络可视化</h2>
+                    <div class="viz-content">
+                        <div class="graph-container">
+                            <div class="graph-pane original">
+                                <h3>🔵 原始图 (Original Graph)</h3>
+                                <div class="graph-svg">
+                                    <svg id="graph-orig"></svg>
+                                </div>
+                            </div>
+                            <div class="graph-pane anon">
+                                <h3>❓ 匿名图 (Anonymized Graph)</h3>
+                                <div class="graph-svg">
+                                    <svg id="graph-anon"></svg>
+                                    <div class="legend" id="legend-anon"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="animation-status" id="anim-status" style="display: none;">
+                            准备中...
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 详细信息 -->
+                <div class="viz-card info">
+                    <h2>📊 实时统计</h2>
+                    <div class="viz-content">
+                        <div class="info-grid" id="info-display">
+                            <div class="info-item">
+                                <div class="info-value">50</div>
+                                <div class="info-label">节点数</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-value">0</div>
+                                <div class="info-label">当前步骤</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-value">0</div>
+                                <div class="info-label">已匹配</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-value">0%</div>
+                                <div class="info-label">准确率</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右侧控制面板 -->
+            <div class="control-panel">
+                <!-- 阶段选择 -->
+                <div class="control-section">
+                    <h3>📚 攻击阶段</h3>
+                    <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+                        <button class="stage-btn active" data-stage="1">阶段一</button>
+                        <button class="stage-btn" data-stage="2">阶段二</button>
+                        <button class="stage-btn" data-stage="3">阶段三</button>
+                    </div>
+                </div>
+                
+                <!-- 方法选择 -->
+                <div class="control-section">
+                    <h3 id="stage-title">🎯 阶段一：身份去匿名化</h3>
+                    <div class="method-grid" id="method-selector">
+                        <!-- 动态生成 -->
+                    </div>
+                </div>
+                
+                <!-- 原理说明 -->
+                <div class="control-section">
+                    <h3>📖 方法原理</h3>
+                    <div class="principle-box" id="principle-display">
+                        <p style="text-align: center; color: #999;">
+                            请选择一个方法查看详细原理
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- 播放控制 -->
+                <div class="control-section">
+                    <h3>⚙️ 动画控制</h3>
+                    <div class="controls">
+                        <button class="ctrl-btn play" id="play-btn">▶️ 开始演示</button>
+                        <button class="ctrl-btn reset" id="reset-btn">🔄 重置</button>
+                    </div>
+                    <div style="margin-top: 15px; padding: 12px; background: #fff3cd; border-radius: 8px; font-size: 0.85em;">
+                        <strong>💡 提示:</strong> 点击"开始演示"观看动画，悬停节点查看详情
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 全局变量
+        let DATA = null;
+        let currentStage = 1;
+        let currentMethod = null;
+        let isPlaying = false;
+        let currentStep = 0;
+        let animationInterval = null;
+        
+        // 图可视化对象
+        let origSim = null;
+        let anonSim = null;
+        let origElements = {nodes: null, links: null, labels: null};
+        let anonElements = {nodes: null, links: null, labels: null};
+        
+        // 加载数据
+        d3.json('real_data_demo.json').then(data => {
+            DATA = data;
+            console.log('✅ 数据加载成功', data);
+            initializeUI();
+        }).catch(err => {
+            console.error('❌ 数据加载失败:', err);
+            alert('无法加载 real_data_demo.json，请检查文件是否存在！\n错误详情: ' + err.message);
+        });
+        
+        function initializeUI() {
+            // 渲染初始图
+            renderGraphs();
+            
+            // 绑定阶段选择按钮
+            d3.selectAll('.stage-btn').on('click', function() {
+                const stage = parseInt(this.dataset.stage);
+                selectStage(stage);
+            });
+            
+            // 绑定控制按钮
+            d3.select('#play-btn').on('click', toggleAnimation);
+            d3.select('#reset-btn').on('click', resetAnimation);
+            
+            // 初始化第一个阶段
+            selectStage(1);
+        }
+        
+        function selectStage(stage) {
+            currentStage = stage;
+            currentMethod = null;
+            resetAnimation();
+            
+            // 更新阶段按钮
+            d3.selectAll('.stage-btn').classed('active', false);
+            d3.select(`.stage-btn[data-stage="${stage}"]`).classed('active', true);
+            
+            // 更新标题和方法列表
+            const titles = {
+                1: '🎯 阶段一：身份去匿名化',
+                2: '🎯 阶段二：属性推断攻击',
+                3: '🎯 阶段三：差分隐私防御'
+            };
+            document.getElementById('stage-title').textContent = titles[stage];
+            
+            // 渲染方法按钮
+            renderMethodButtons();
+        }
+        
+        function renderMethodButtons() {
+            const methodSelector = document.getElementById('method-selector');
+            methodSelector.innerHTML = '';
+            
+            const methods = {
+                1: [
+                    {id: 'greedy', name: '贪心特征匹配', desc: '逐步匹配最相似节点对'},
+                    {id: 'hungarian', name: '匈牙利算法', desc: '全局最优二分匹配'},
+                    {id: 'graph_kernel', name: '图核方法', desc: '基于子图结构比较'},
+                    {id: 'deepwalk', name: 'DeepWalk嵌入', desc: '随机游走 + 图嵌入'}
+                ],
+                2: [
+                    {id: 'attribute', name: '邻居投票推断', desc: '基于邻居属性投票'},
+                    {id: 'label_propagation', name: '标签传播', desc: '迭代扩散标签信息'},
+                    {id: 'graphsage', name: 'GraphSAGE', desc: '图神经网络聚合'}
+                ],
+                3: [
+                    {id: 'defense', name: '差分隐私防御', desc: '边扰动机制'},
+                    {id: 'k_anonymity', name: 'k-匿名化', desc: '节点度数匿名化'},
+                    {id: 'noise_injection', name: '噪声注入', desc: '添加虚假节点和边'}
+                ]
+            };
+            
+            const stageMethods = methods[currentStage] || [];
+            
+            stageMethods.forEach(m => {
+                const btn = document.createElement('button');
+                btn.className = 'method-btn';
+                btn.dataset.method = m.id;
+                btn.innerHTML = `
+                    <div class="method-name">${m.name}</div>
+                    <div class="method-desc">${m.desc}</div>
+                `;
+                btn.onclick = () => selectMethod(m.id);
+                methodSelector.appendChild(btn);
+            });
+        }
+        
+        function selectMethod(method) {
+            currentMethod = method;
+            currentStep = 0;
+            isPlaying = false;
+            clearInterval(animationInterval);
+            
+            // 更新按钮状态
+            d3.selectAll('.method-btn').classed('active', false);
+            d3.select(`.method-btn[data-method="${method}"]`).classed('active', true);
+            d3.select('#play-btn').text('▶️ 开始演示').classed('pause', false);
+            
+            // 显示原理
+            showPrinciple(method);
+            
+            // 重置图
+            resetGraphVisualization();
+            
+            // 更新图例
+            updateLegend(method);
+            
+            // 更新标题
+            updateTitle(method);
+        }
+        
+        function showPrinciple(method) {
+            const principles = {
+                greedy: `
+                    <h4 style="color: var(--color-blue); margin-bottom: 10px;">贪心特征匹配原理</h4>
+                    <div class="step">
+                        <strong>步骤1:</strong> 计算每个节点的结构特征（度数、聚类系数、三角形数等）
+                    </div>
+                    <div class="formula">f(v) = [degree, clustering, triangles, ...]</div>
+                    <div class="step">
+                        <strong>步骤2:</strong> 计算原始图和匿名图节点间的余弦相似度
+                    </div>
+                    <div class="formula">S[i,j] = cos(f(vi), f(vj'))</div>
+                    <div class="step">
+                        <strong>步骤3:</strong> 贪心选择：每次选择相似度最大的节点对进行匹配
+                    </div>
+                    <div class="step">
+                        <strong>演示内容:</strong> 观察节点如何逐对匹配，绿色连线表示已匹配
+                    </div>
+                `,
+                hungarian: `
+                    <h4 style="color: var(--color-blue); margin-bottom: 10px;">匈牙利算法原理</h4>
+                    <div class="step">
+                        <strong>步骤1-2:</strong> 与贪心相同，计算特征和相似度矩阵
+                    </div>
+                    <div class="step">
+                        <strong>步骤3:</strong> 转换为成本矩阵 C = -S
+                    </div>
+                    <div class="formula">min Σ C[i, π(i)]</div>
+                    <div class="step">
+                        <strong>步骤4:</strong> 使用匈牙利算法求解最小成本匹配
+                    </div>
+                    <div class="step">
+                        <strong>优势:</strong> 保证全局最优（vs 贪心的局部最优）
+                    </div>
+                    <div class="step">
+                        <strong>演示内容:</strong> 一次性显示所有最优匹配
+                    </div>
+                `,
+                graph_kernel: `
+                    <h4 style="color: var(--color-blue); margin-bottom: 10px;">图核方法原理</h4>
+                    <div class="step">
+                        <strong>步骤1:</strong> 提取每个节点的局部子图（1-hop, 2-hop邻居）
+                    </div>
+                    <div class="step">
+                        <strong>步骤2:</strong> 使用 Weisfeiler-Lehman 核计算子图相似度
+                    </div>
+                    <div class="formula">label'(v) = hash(label(v) + sort([label(u) for u∈N(v)]))</div>
+                    <div class="step">
+                        <strong>步骤3:</strong> 基于核矩阵进行节点匹配
+                    </div>
+                    <div class="step">
+                        <strong>演示内容:</strong> 观察子图如何从中心节点扩展
+                    </div>
+                `,
+                deepwalk: `
+                    <h4 style="color: var(--color-blue); margin-bottom: 10px;">DeepWalk图嵌入原理</h4>
+                    <div class="step">
+                        <strong>步骤1:</strong> 从每个节点开始进行多条随机游走
+                    </div>
+                    <div class="formula">路径: [v, u1, u2, ..., ut]</div>
+                    <div class="step">
+                        <strong>步骤2:</strong> 使用 Skip-gram 模型训练节点嵌入
+                    </div>
+                    <div class="formula">max Σ log P(neighbors(v) | v)</div>
+                    <div class="step">
+                        <strong>步骤3:</strong> 在嵌入空间中匹配相似节点
+                    </div>
+                    <div class="step">
+                        <strong>演示内容:</strong> 观察随机游走路径如何遍历图
+                    </div>
+                `,
+                attribute: `
+                    <h4 style="color: var(--color-blue); margin-bottom: 10px;">属性推断原理</h4>
+                    <div class="step">
+                        <strong>问题:</strong> 已知部分节点的属性（颜色），推断未知节点（灰色）的属性
+                    </div>
+                    <div class="step">
+                        <strong>方法:</strong> 邻居投票 - 统计邻居的属性标签
+                    </div>
+                    <div class="formula">predicted_attr(v) = argmax(Counter([attr(u) for u∈N(v)]))</div>
+                    <div class="step">
+                        <strong>属性颜色:</strong><br>
+                        🔴 属性A（红色填充）<br>
+                        🔵 属性B（蓝色填充）<br>
+                        🟢 属性C（绿色填充）<br>
+                        ⚫ 未知属性（灰色填充）
+                    </div>
+                    <div class="step">
+                        <strong>推断成功标记:</strong><br>
+                        💙 蓝色边框 = 已成功推断（避免与属性颜色冲突）
+                    </div>
+                    <div class="step">
+                        <strong>演示内容:</strong> 观察灰色节点如何通过邻居投票变成对应属性的颜色，并加上蓝色边框
+                    </div>
+                `,
+                attribute: `
+                    <h4 style="color: var(--color-blue); margin-bottom: 10px;">属性推断原理</h4>
+                    <div class="step">
+                        <strong>问题:</strong> 已知部分节点的属性（颜色），推断未知节点（灰色）的属性
+                    </div>
+                    <div class="step">
+                        <strong>方法:</strong> 邻居投票 - 统计邻居的属性标签
+                    </div>
+                    <div class="formula">predicted_attr(v) = argmax(Counter([attr(u) for u∈N(v)]))</div>
+                    <div class="step">
+                        <strong>属性颜色:</strong><br>
+                        🔴 属性A（红色填充）<br>
+                        🔵 属性B（蓝色填充）<br>
+                        🟢 属性C（绿色填充）<br>
+                        ⚫ 未知属性（灰色填充）
+                    </div>
+                    <div class="step">
+                        <strong>推断成功标记:</strong><br>
+                        💙 蓝色边框 = 已成功推断（避免与属性颜色冲突）
+                    </div>
+                    <div class="step">
+                        <strong>演示内容:</strong> 观察灰色节点如何通过邻居投票变成对应属性的颜色，并加上蓝色边框
+                    </div>
+                `,
+                label_propagation: `
+                    <h4 style="color: var(--color-blue); margin-bottom: 10px;">标签传播原理</h4>
+                    <div class="step">
+                        <strong>问题:</strong> 迭代方式传播已知节点的属性标签
+                    </div>
+                    <div class="step">
+                        <strong>算法流程:</strong><br>
+                        1. 初始化：已知节点固定标签，未知节点标签为空<br>
+                        2. 迭代：每个未知节点采用邻居中最频繁的标签<br>
+                        3. 重复直到收敛或达到最大迭代次数
+                    </div>
+                    <div class="formula">Y(t+1) = D^(-1/2) A D^(-1/2) Y(t)</div>
+                    <div class="step">
+                        <strong>优势:</strong> 考虑了多跳邻居信息，传播范围更广
+                    </div>
+                    <div class="step">
+                        <strong>演示内容:</strong> 观察标签如何像波纹一样从已知节点扩散到未知节点
+                    </div>
+                `,
+                graphsage: `
+                    <h4 style="color: var(--color-blue); margin-bottom: 10px;">GraphSAGE原理</h4>
+                    <div class="step">
+                        <strong>核心思想:</strong> 通过采样和聚合邻居特征来学习节点表示
+                    </div>
+                    <div class="step">
+                        <strong>算法流程:</strong><br>
+                        1. 采样：为每个节点采样固定数量的邻居<br>
+                        2. 聚合：使用聚合函数（Mean/LSTM/Pool）汇总邻居特征<br>
+                        3. 更新：拼接自身和邻居特征，通过神经网络更新
+                    </div>
+                    <div class="formula">h_v^(k) = σ(W · CONCAT(h_v^(k-1), AGG({h_u^(k-1), u∈N(v)})))</div>
+                    <div class="step">
+                        <strong>优势:</strong> 可处理大规模图，支持归纳学习
+                    </div>
+                    <div class="step">
+                        <strong>演示内容:</strong> 观察节点如何通过多层聚合获取k-hop邻域信息
+                    </div>
+                `,
+                defense: `
+                    <h4 style="color: var(--color-blue); margin-bottom: 10px;">差分隐私防御原理</h4>
+                    <div class="step">
+                        <strong>ε-差分隐私:</strong> 保护图结构隐私
+                    </div>
+                    <div class="formula">P(M(G) ∈ S) / P(M(G') ∈ S) ≤ e^ε</div>
+                    <div class="step">
+                        <strong>边扰动机制:</strong><br>
+                        • 以概率 p = 1/(1+e^ε) 删除现有边<br>
+                        • 以概率 p = 1/(1+e^ε) 添加噪声边
+                    </div>
+                    <div class="step">
+                        <strong>演示内容:</strong><br>
+                        🔴 红色虚线 = 删除的边<br>
+                        🟢 绿色虚线 = 添加的边
+                    </div>
+                    <div class="step">
+                        <strong>权衡:</strong> ε↓ 隐私↑ 效用↓
+                    </div>
+                `,
+                k_anonymity: `
+                    <h4 style="color: var(--color-blue); margin-bottom: 10px;">k-匿名化原理</h4>
+                    <div class="step">
+                        <strong>目标:</strong> 使每个节点至少与k-1个其他节点具有相同的结构特征
+                    </div>
+                    <div class="step">
+                        <strong>方法:</strong> 度数序列k-匿名化<br>
+                        • 识别度数独特的节点<br>
+                        • 通过添加/删除边使度数相同<br>
+                        • 确保每个度数至少有k个节点
+                    </div>
+                    <div class="formula">∀v, |{u : degree(u) = degree(v)}| ≥ k</div>
+                    <div class="step">
+                        <strong>参数k:</strong><br>
+                        • k=2: 最小匿名化<br>
+                        • k=5: 中等保护<br>
+                        • k=10: 强保护但图扭曲大
+                    </div>
+                    <div class="step">
+                        <strong>演示内容:</strong> 观察如何修改图使节点度数分组，每组至少k个
+                    </div>
+                `,
+                noise_injection: `
+                    <h4 style="color: var(--color-blue); margin-bottom: 10px;">噪声注入防御原理</h4>
+                    <div class="step">
+                        <strong>策略:</strong> 向图中注入虚假节点和边来混淆攻击者
+                    </div>
+                    <div class="step">
+                        <strong>方法:</strong><br>
+                        1. <strong>虚假节点注入:</strong> 添加不存在的节点<br>
+                        2. <strong>虚假边注入:</strong> 在真实节点间添加假边<br>
+                        3. <strong>度数扰动:</strong> 使攻击者无法准确计算节点度数
+                    </div>
+                    <div class="step">
+                        <strong>效果:</strong><br>
+                        • 混淆节点特征（度数、聚类系数等）<br>
+                        • 降低结构相似度匹配准确率<br>
+                        • 增加攻击者的不确定性
+                    </div>
+                    <div class="step">
+                        <strong>演示内容:</strong><br>
+                        🟣 紫色节点 = 虚假节点<br>
+                        🟡 黄色边 = 虚假边
+                    </div>
+                `
+            };
+            
+            document.getElementById('principle-display').innerHTML = 
+                principles[method] || '<p style="color: #999;">暂无原理说明</p>';
+        }
+        
+        function updateLegend(method) {
+            const legendDiv = document.getElementById('legend-anon');
+            let html = '';
+            
+            if (method === 'attribute' || method === 'label_propagation' || method === 'graphsage') {
+                html = `
+                    <strong>属性图例:</strong>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--color-attr-a);"></div>
+                        属性 A
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--color-attr-b);"></div>
+                        属性 B
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--color-attr-c);"></div>
+                        属性 C
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--color-gray);"></div>
+                        未知属性
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: white; border: 4px solid var(--color-blue);"></div>
+                        已推断
+                    </div>
+                `;
+            } else if (method === 'defense' || method === 'k_anonymity') {
+                html = `
+                    <strong>边状态:</strong>
+                    <div class="legend-item">
+                        <div style="width: 30px; height: 3px; background: #999; margin-right: 8px;"></div>
+                        原始边
+                    </div>
+                    <div class="legend-item">
+                        <div style="width: 30px; height: 3px; background: var(--color-red); border-top: 2px dashed var(--color-red); margin-right: 8px;"></div>
+                        删除的边
+                    </div>
+                    <div class="legend-item">
+                        <div style="width: 30px; height: 3px; background: var(--color-green); border-top: 2px dashed var(--color-green); margin-right: 8px;"></div>
+                        添加的边
+                    </div>
+                `;
+            } else if (method === 'noise_injection') {
+                html = `
+                    <strong>噪声注入:</strong>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--color-blue);"></div>
+                        真实节点
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #9C27B0;"></div>
+                        虚假节点
+                    </div>
+                    <div class="legend-item">
+                        <div style="width: 30px; height: 3px; background: #999; margin-right: 8px;"></div>
+                        真实边
+                    </div>
+                    <div class="legend-item">
+                        <div style="width: 30px; height: 3px; background: #FFC107; border-top: 2px dashed #FFC107; margin-right: 8px;"></div>
+                        虚假边
+                    </div>
+                `;
+            } else {
+                html = `
+                    <strong>节点状态:</strong>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--color-blue);"></div>
+                        已知身份
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--color-gray);"></div>
+                        未知身份
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: white; border: 4px solid var(--color-green);"></div>
+                        匹配成功
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: white; border: 4px solid var(--color-red);"></div>
+                        匹配失败
+                    </div>
+                `;
+            }
+            
+            legendDiv.innerHTML = html;
+        }
+        
+        function updateTitle(method) {
+            const titles = {
+                greedy: '贪心特征匹配 - 逐步匹配演示（绿框=成功，红框=失败）',
+                hungarian: '匈牙利算法 - 全局最优匹配',
+                graph_kernel: '图核方法 - 子图结构比较',
+                deepwalk: 'DeepWalk - 原图上的随机游走演示',
+                attribute: '邻居投票 - 属性推断演示（蓝框=已推断）',
+                label_propagation: '标签传播 - 迭代扩散演示',
+                graphsage: 'GraphSAGE - 多层邻居聚合演示',
+                defense: '差分隐私防御 - 边扰动演示',
+                k_anonymity: 'k-匿名化 - 度数分组演示',
+                noise_injection: '噪声注入 - 虚假节点和边注入（紫色=虚假节点，黄色=虚假边）'
+            };
+            
+            document.getElementById('viz-title').textContent = titles[method] || '图网络可视化';
+        }
+        
+        function renderGraphs() {
+            if (!DATA) return;
+            
+            renderSingleGraph('orig', DATA.graph, 'graph-orig');
+            renderSingleGraph('anon', DATA.graph, 'graph-anon');
+        }
+        
+        function renderSingleGraph(type, graphData, svgId) {
+            const svg = d3.select('#' + svgId);
+            svg.selectAll('*').remove();
+            
+            const container = svg.node().parentNode;
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            // 创建缩放
+            const zoom = d3.zoom()
+                .scaleExtent([0.5, 3])
+                .on('zoom', (event) => g.attr('transform', event.transform));
+            
+            svg.call(zoom);
+            const g = svg.append('g');
+            
+            // 力导向布局
+            const simulation = d3.forceSimulation(graphData.nodes)
+                .force('link', d3.forceLink(graphData.edges)
+                    .id(d => d.index)
+                    .distance(40))
+                .force('charge', d3.forceManyBody().strength(-150))
+                .force('center', d3.forceCenter(width/2, height/2))
+                .force('collision', d3.forceCollide().radius(15));
+            
+            // 绘制边
+            const link = g.append('g')
+                .selectAll('line')
+                .data(graphData.edges)
+                .join('line')
+                .attr('class', 'link');
+            
+            // 绘制节点
+            const node = g.append('g')
+                .selectAll('circle')
+                .data(graphData.nodes)
+                .join('circle')
+                .attr('class', d => {
+                    let classes = 'node';
+                    if (type === 'anon' && !d.known) classes += ' unknown';
+                    if (d.attribute) classes += ' attr-' + d.attribute;
+                    return classes;
+                })
+                .attr('r', d => Math.max(8, Math.sqrt(d.degree) * 2.5))
+                .attr('fill', d => {
+                    if (type === 'anon' && !d.known) return 'var(--color-gray)';
+                    return 'var(--color-blue)';
+                })
+                .on('mouseover', function(event, d) {
+                    showTooltip(event, d, type);
+                })
+                .on('mouseout', hideTooltip)
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+            
+            // 添加标签
+            const labels = g.append('g')
+                .selectAll('text')
+                .data(graphData.nodes.filter(d => d.degree > 5))
+                .join('text')
+                .attr('class', 'node-label')
+                .text(d => d.id);
+            
+            // 更新位置
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                
+                node
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+                
+                labels
+                    .attr('x', d => d.x)
+                    .attr('y', d => d.y);
+            });
+            
+            // 3秒后停止
+            setTimeout(() => simulation.stop(), 3000);
+            
+            // 拖拽函数
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+            
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+            
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+            
+            // 保存引用
+            if (type === 'orig') {
+                origSim = simulation;
+                origElements = {nodes: node, links: link, labels: labels, g: g, svg: svg};
+            } else {
+                anonSim = simulation;
+                anonElements = {nodes: node, links: link, labels: labels, g: g, svg: svg};
+            }
+        }
+        
+        function showTooltip(event, d, type) {
+            let html = `<strong>节点 ${d.id}</strong><br>`;
+            html += `度数: ${d.degree}<br>`;
+            if (type === 'anon') {
+                html += d.known ? '状态: 已知身份' : '状态: 未知身份';
+            }
+            if (d.attribute) {
+                html += `<br>属性: ${d.attribute}`;
+            }
+            
+            let tooltip = d3.select('.tooltip');
+            if (tooltip.empty()) {
+                tooltip = d3.select('body').append('div').attr('class', 'tooltip');
+            }
+            
+            tooltip
+                .html(html)
+                .style('display', 'block')
+                .style('left', (event.pageX + 15) + 'px')
+                .style('top', (event.pageY - 10) + 'px');
+        }
+        
+        function hideTooltip() {
+            d3.select('.tooltip').style('display', 'none');
+        }
+        
+        function resetGraphVisualization() {
+            if (!origElements.nodes || !anonElements.nodes) return;
+            
+            // 重置所有节点和边的样式
+            origElements.nodes.classed('highlighted matched-success matched-fail', false);
+            anonElements.nodes.classed('highlighted matched-success matched-fail', false);
+            origElements.links.classed('highlighted walk-path removed added', false);
+            anonElements.links.classed('highlighted walk-path removed added', false);
+            
+            // 移除匹配线
+            d3.selectAll('.match-line').remove();
+            
+            // 重置匿名图节点颜色
+            if (currentMethod === 'attribute') {
+                anonElements.nodes.attr('fill', d => {
+                    if (d.known) {
+                        if (d.attribute === 'A') return 'var(--color-attr-a)';
+                        if (d.attribute === 'B') return 'var(--color-attr-b)';
+                        if (d.attribute === 'C') return 'var(--color-attr-c)';
+                    }
+                    return 'var(--color-gray)';
+                });
+            } else {
+                anonElements.nodes.attr('fill', d => {
+                    return d.known ? 'var(--color-blue)' : 'var(--color-gray)';
+                });
+            }
+            
+            updateInfoDisplay();
+        }
+        
+        function toggleAnimation() {
+            if (!currentMethod) {
+                alert('请先选择一个演示方法！');
+                return;
+            }
+            
+            isPlaying = !isPlaying;
+            const btn = d3.select('#play-btn');
+            
+            if (isPlaying) {
+                btn.text('⏸ 暂停').classed('pause', true);
+                startAnimation();
+            } else {
+                btn.text('▶️ 继续').classed('pause', false);
+                clearInterval(animationInterval);
+            }
+        }
+        
+        function resetAnimation() {
+            isPlaying = false;
+            currentStep = 0;
+            clearInterval(animationInterval);
+            d3.select('#play-btn').text('▶️ 开始演示').classed('pause', false);
+            d3.select('#anim-status').style('display', 'none');
+            resetGraphVisualization();
+        }
+        
+        function startAnimation() {
+            const animations = {
+                greedy: animateGreedy,
+                hungarian: animateHungarian,
+                graph_kernel: animateGraphKernel,
+                deepwalk: animateDeepWalk,
+                attribute: animateAttribute,
+                label_propagation: animateLabelPropagation,
+                graphsage: animateGraphSAGE,
+                defense: animateDefense,
+                k_anonymity: animateKAnonymity,
+                noise_injection: animateNoiseInjection
+            };
+            
+            const animFunc = animations[currentMethod];
+            if (animFunc) {
+                animFunc();
+            }
+        }
+        
+        // ========== 贪心匹配动画 ==========
+        function animateGreedy() {
+            const steps = DATA.animations.greedy;
+            if (!steps || steps.length === 0) return;
+            
+            // 初始化统计
+            totalSteps = steps.length;
+            successCount = 0;
+            
+            d3.select('#anim-status').style('display', 'block');
+            updateInfoDisplay();
+            
+            animationInterval = setInterval(() => {
+                if (currentStep >= steps.length) {
+                    isPlaying = false;
+                    clearInterval(animationInterval);
+                    d3.select('#play-btn').text('✓ 完成').classed('pause', false);
+                    d3.select('#anim-status').text('匹配完成！');
+                    return;
+                }
+                
+                const step = steps[currentStep];
+                d3.select('#anim-status').text(`步骤 ${currentStep + 1}/${steps.length}: ${step.description}`);
+                
+                // 高亮原始图节点（假设都匹配成功，用绿色边框）
+                origElements.nodes
+                    .classed('highlighted', d => d.index === step.orig_node)
+                    .classed('matched-success', function(d) {
+                        const wasMatched = d3.select(this).classed('matched-success');
+                        return wasMatched || d.index === step.orig_node;
+                    });
+                
+                // 高亮匿名图节点
+                anonElements.nodes
+                    .classed('highlighted', d => d.index === step.anon_node)
+                    .classed('matched-success', function(d) {
+                        const wasMatched = d3.select(this).classed('matched-success');
+                        return wasMatched || d.index === step.anon_node;
+                    });
+                
+                // 不绘制连线，只高亮节点
+                
+                // 更新统计（假设90%匹配成功）
+                if (Math.random() > 0.1) {
+                    successCount++;
+                }
+                
+                currentStep++;
+                updateInfoDisplay();
+                
+            }, 2000); // 每2秒一步
+        }
+        
+        // ========== 匈牙利算法动画 ==========
+        function animateHungarian() {
+            // 初始化统计
+            totalSteps = 1;
+            currentStep = 0;
+            successCount = 0;
+            
+            d3.select('#anim-status').style('display', 'block').text('匈牙利算法：计算全局最优匹配...');
+            updateInfoDisplay();
+            
+            setTimeout(() => {
+                // 一次性显示所有匹配
+                const steps = DATA.animations.greedy; // 使用相同数据演示
+                successCount = steps.length;
+                
+                steps.forEach(step => {
+                    origElements.nodes.filter(d => d.index === step.orig_node).classed('matched-success', true);
+                    anonElements.nodes.filter(d => d.index === step.anon_node).classed('matched-success', true);
+                });
+                
+                d3.select('#anim-status').text('全局最优匹配完成！');
+                d3.select('#play-btn').text('✓ 完成').classed('pause', false);
+                isPlaying = false;
+                clearInterval(animationInterval);
+                
+                currentStep = steps.length;
+                updateInfoDisplay();
+            }, 1500);
+        }
+        
+        // ========== 图核方法动画 ==========
+        function animateGraphKernel() {
+            const kernelData = DATA.animations.graph_kernel;
+            if (!kernelData) return;
+            
+            // 初始化统计
+            totalSteps = 3; // 提取子图、计算核、匹配
+            currentStep = 0;
+            successCount = 0;
+            
+            d3.select('#anim-status').style('display', 'block');
+            updateInfoDisplay();
+            let step = 0;
+            
+            animationInterval = setInterval(() => {
+                if (step === 0) {
+                    // 高亮中心节点
+                    d3.select('#anim-status').text('选择中心节点进行子图提取');
+                    currentStep = 1;
+                    updateInfoDisplay();
+                    origElements.nodes.filter(d => d.index === kernelData.center_node)
+                        .classed('highlighted', true);
+                    anonElements.nodes.filter(d => d.index === kernelData.center_node)
+                        .classed('highlighted', true);
+                } else if (step === 1) {
+                    // 高亮1-hop邻居
+                    d3.select('#anim-status').text('提取1-hop邻居子图');
+                    const neighbors = kernelData.hops[0].nodes;
+                    origElements.links.classed('highlighted', l => 
+                        l.source.index === kernelData.center_node || l.target.index === kernelData.center_node
+                    );
+                    currentStep = 2;
+                    updateInfoDisplay();
+                } else if (step === 2) {
+                    // WL核迭代
+                    d3.select('#anim-status').text('WL核迭代更新标签...');
+                    currentStep = 3;
+                    successCount = 8; // 模拟匹配成功数
+                    updateInfoDisplay();
+                } else {
+                    d3.select('#anim-status').text('子图比较完成！');
+                    d3.select('#play-btn').text('✓ 完成');
+                    isPlaying = false;
+                    clearInterval(animationInterval);
+                }
+                
+                step++;
+            }, 2000);
+        }
+        
+        // ========== DeepWalk动画 ==========
+        function animateDeepWalk() {
+            const walks = DATA.animations.deepwalk.walks;
+            if (!walks || walks.length === 0) return;
+            
+            // 初始化统计
+            let totalWalkSteps = walks.reduce((sum, walk) => sum + walk.length, 0);
+            totalSteps = totalWalkSteps;
+            currentStep = 0;
+            successCount = 0;
+            
+            d3.select('#anim-status').style('display', 'block');
+            updateInfoDisplay();
+            let walkIdx = 0;
+            let stepIdx = 0;
+            
+            animationInterval = setInterval(() => {
+                if (walkIdx >= walks.length) {
+                    d3.select('#anim-status').text('随机游走采样完成！');
+                    d3.select('#play-btn').text('✓ 完成');
+                    isPlaying = false;
+                    clearInterval(animationInterval);
+                    return;
+                }
+                
+                const walk = walks[walkIdx];
+                
+                if (stepIdx === 0) {
+                    // 重置
+                    origElements.nodes.classed('highlighted', false);
+                    origElements.links.classed('walk-path', false);
+                }
+                
+                if (stepIdx < walk.length) {
+                    d3.select('#anim-status').text(`随机游走 ${walkIdx + 1}/${walks.length} - 步骤 ${stepIdx + 1}/${walk.length}`);
+                    
+                    // 高亮当前节点
+                    origElements.nodes.classed('highlighted', d => d.index === walk[stepIdx]);
+                    
+                    // 高亮路径边
+                    if (stepIdx > 0) {
+                        origElements.links.classed('walk-path', l => 
+                            (l.source.index === walk[stepIdx-1] && l.target.index === walk[stepIdx]) ||
+                            (l.target.index === walk[stepIdx-1] && l.source.index === walk[stepIdx])
+                        );
+                    }
+                    
+                    stepIdx++;
+                    currentStep++;
+                    if (stepIdx === walk.length) successCount++; // 每完成一条游走算一个成功
+                    updateInfoDisplay();
+                } else {
+                    // 下一条游走
+                    walkIdx++;
+                    stepIdx = 0;
+                }
+                
+            }, 500); // 每0.5秒一步
+        }
+        
+        // ========== 属性推断动画 ==========
+        function animateAttribute() {
+            const inferenceSteps = DATA.animations.attribute_inference;
+            if (!inferenceSteps || inferenceSteps.length === 0) return;
+            
+            // 初始化统计
+            totalSteps = inferenceSteps.length;
+            inferredCount = 0;
+            
+            // 先设置属性颜色
+            anonElements.nodes.attr('fill', d => {
+                if (d.known) {
+                    if (d.attribute === 'A') return 'var(--color-attr-a)';
+                    if (d.attribute === 'B') return 'var(--color-attr-b)';
+                    if (d.attribute === 'C') return 'var(--color-attr-c)';
+                }
+                return 'var(--color-gray)';
+            });
+            
+            d3.select('#anim-status').style('display', 'block');
+            updateInfoDisplay();
+            
+            animationInterval = setInterval(() => {
+                if (currentStep >= inferenceSteps.length) {
+                    d3.select('#anim-status').text('属性推断完成！');
+                    d3.select('#play-btn').text('✓ 完成');
+                    isPlaying = false;
+                    clearInterval(animationInterval);
+                    return;
+                }
+                
+                const step = inferenceSteps[currentStep];
+                d3.select('#anim-status').text(
+                    `推断节点 ${step.node}: 投票结果 ${JSON.stringify(step.votes)} → ${step.predicted}`
+                );
+                
+                // 高亮目标节点和邻居
+                anonElements.nodes.classed('highlighted', d => 
+                    d.index === step.node || step.neighbors.includes(d.index)
+                );
+                
+                // 高亮连接边
+                anonElements.links.classed('highlighted', l =>
+                    (l.source.index === step.node && step.neighbors.includes(l.target.index)) ||
+                    (l.target.index === step.node && step.neighbors.includes(l.source.index))
+                );
+                
+                // 更新节点颜色和属性
+                setTimeout(() => {
+                    anonElements.nodes.filter(d => d.index === step.node)
+                        .each(function(d) {
+                            // 更新数据中的属性
+                            d.attribute = step.predicted;
+                            d.known = true;
+                        })
+                        .transition()
+                        .duration(800)
+                        .attr('fill', () => {
+                            if (step.predicted === 'A') return 'var(--color-attr-a)';
+                            if (step.predicted === 'B') return 'var(--color-attr-b)';
+                            if (step.predicted === 'C') return 'var(--color-attr-c)';
+                            return 'var(--color-gray)';
+                        })
+                        .on('end', function() {
+                            // 用边框高亮表示推断成功（蓝色边框，避免和属性颜色冲突）
+                            d3.select(this)
+                                .style('stroke', 'var(--color-blue)')
+                                .style('stroke-width', '4px')
+                                .style('filter', 'drop-shadow(0 0 6px var(--color-blue))');
+                            
+                            // 更新统计
+                            inferredCount++;
+                            updateInfoDisplay();
+                        });
+                }, 1000);
+                
+                currentStep++;
+                updateInfoDisplay();
+                
+            }, 2500); // 每2.5秒一步
+        }
+        
+        // ========== 差分隐私防御动画 ==========
+        function animateDefense() {
+            const defenseData = DATA.animations.defense;
+            if (!defenseData) return;
+            
+            // 初始化统计
+            totalSteps = defenseData.edges_to_remove.length + defenseData.edges_to_add.length;
+            currentStep = 0;
+            
+            d3.select('#anim-status').style('display', 'block');
+            updateInfoDisplay();
+            let phase = 0; // 0: 删边, 1: 加边
+            let edgeIdx = 0;
+            
+            animationInterval = setInterval(() => {
+                if (phase === 0) {
+                    // 删边阶段
+                    if (edgeIdx < defenseData.edges_to_remove.length) {
+                        d3.select('#anim-status').text(
+                            `删除边 ${edgeIdx + 1}/${defenseData.edges_to_remove.length}`
+                        );
+                        
+                        const idx = defenseData.edges_to_remove[edgeIdx];
+                        anonElements.links.filter((d, i) => i === idx)
+                            .classed('removed', true)
+                            .transition()
+                            .duration(500)
+                            .attr('stroke-opacity', 0.3);
+                        
+                        edgeIdx++;
+                        currentStep++;
+                        updateInfoDisplay();
+                    } else {
+                        phase = 1;
+                        edgeIdx = 0;
+                    }
+                } else {
+                    // 加边阶段
+                    if (edgeIdx < defenseData.edges_to_add.length) {
+                        d3.select('#anim-status').text(
+                            `添加噪声边 ${edgeIdx + 1}/${defenseData.edges_to_add.length}`
+                        );
+                        
+                        const edge = defenseData.edges_to_add[edgeIdx];
+                        const sourceNode = DATA.graph.nodes.find(n => n.index === edge.source);
+                        const targetNode = DATA.graph.nodes.find(n => n.index === edge.target);
+                        
+                        if (sourceNode && targetNode) {
+                            anonElements.g.append('line')
+                                .attr('class', 'link added')
+                                .attr('x1', sourceNode.x)
+                                .attr('y1', sourceNode.y)
+                                .attr('x2', targetNode.x)
+                                .attr('y2', targetNode.y)
+                                .attr('stroke-opacity', 0)
+                                .transition()
+                                .duration(500)
+                                .attr('stroke-opacity', 0.7);
+                        }
+                        
+                        edgeIdx++;
+                        currentStep++;
+                        updateInfoDisplay();
+                    } else {
+                        d3.select('#anim-status').text('边扰动完成！');
+                        d3.select('#play-btn').text('✓ 完成');
+                        isPlaying = false;
+                        clearInterval(animationInterval);
+                    }
+                }
+                
+            }, 800); // 每0.8秒一条边
+        }
+        
+        // ========== 标签传播动画 ==========
+        function animateLabelPropagation() {
+            // 初始化统计
+            const maxIterations = 5;
+            totalSteps = maxIterations;
+            currentStep = 0;
+            inferredCount = 0;
+            
+            d3.select('#anim-status').style('display', 'block').text('标签传播：迭代扩散中...');
+            updateInfoDisplay();
+            
+            // 先设置初始属性颜色
+            anonElements.nodes.attr('fill', d => {
+                if (d.known) {
+                    if (d.attribute === 'A') return 'var(--color-attr-a)';
+                    if (d.attribute === 'B') return 'var(--color-attr-b)';
+                    if (d.attribute === 'C') return 'var(--color-attr-c)';
+                }
+                return 'var(--color-gray)';
+            });
+            
+            let iteration = 0;
+            
+            animationInterval = setInterval(() => {
+                if (iteration >= maxIterations) {
+                    d3.select('#anim-status').text('标签传播完成！');
+                    d3.select('#play-btn').text('✓ 完成');
+                    isPlaying = false;
+                    clearInterval(animationInterval);
+                    return;
+                }
+                
+                d3.select('#anim-status').text(`迭代 ${iteration + 1}/${maxIterations}: 标签扩散中...`);
+                
+                // 模拟标签传播：每次迭代随机选择一些未知节点进行推断
+                const unknownNodes = DATA.graph.nodes.filter(d => !d.known);
+                const nodesToInfer = unknownNodes.slice(iteration * 3, (iteration + 1) * 3);
+                
+                nodesToInfer.forEach((node, idx) => {
+                    setTimeout(() => {
+                        // 模拟通过邻居获得属性
+                        const attrs = ['A', 'B', 'C'];
+                        const predictedAttr = attrs[node.index % 3];
+                        
+                        anonElements.nodes.filter(d => d.index === node.index)
+                            .each(function(d) {
+                                d.attribute = predictedAttr;
+                                d.known = true;
+                            })
+                            .transition()
+                            .duration(600)
+                            .attr('fill', () => {
+                                if (predictedAttr === 'A') return 'var(--color-attr-a)';
+                                if (predictedAttr === 'B') return 'var(--color-attr-b)';
+                                if (predictedAttr === 'C') return 'var(--color-attr-c)';
+                            })
+                            .on('end', function() {
+                                d3.select(this)
+                                    .style('stroke', 'var(--color-blue)')
+                                    .style('stroke-width', '4px');
+                                
+                                // 更新统计
+                                inferredCount++;
+                                updateInfoDisplay();
+                            });
+                    }, idx * 400);
+                });
+                
+                currentStep++;
+                iteration++;
+                updateInfoDisplay();
+            }, 2000);
+        }
+        
+        // ========== GraphSAGE动画 ==========
+        function animateGraphSAGE() {
+            // 初始化统计
+            const maxLayers = 3;
+            totalSteps = maxLayers;
+            currentStep = 0;
+            inferredCount = 0;
+            
+            d3.select('#anim-status').style('display', 'block');
+            updateInfoDisplay();
+            
+            // 先设置初始属性颜色
+            anonElements.nodes.attr('fill', d => {
+                if (d.known) {
+                    if (d.attribute === 'A') return 'var(--color-attr-a)';
+                    if (d.attribute === 'B') return 'var(--color-attr-b)';
+                    if (d.attribute === 'C') return 'var(--color-attr-c)';
+                }
+                return 'var(--color-gray)';
+            });
+            
+            let layer = 0;
+            
+            animationInterval = setInterval(() => {
+                if (layer >= maxLayers) {
+                    d3.select('#anim-status').text('GraphSAGE聚合完成！');
+                    d3.select('#play-btn').text('✓ 完成');
+                    isPlaying = false;
+                    clearInterval(animationInterval);
+                    return;
+                }
+                
+                d3.select('#anim-status').text(`Layer ${layer + 1}/${maxLayers}: 聚合${layer + 1}-hop邻居特征...`);
+                
+                // 高亮显示当前层的聚合范围（模拟）
+                const sampleNode = layer * 5 % DATA.graph.nodes.length;
+                anonElements.nodes.classed('highlighted', d => {
+                    // 简化：高亮一些节点表示正在聚合
+                    return Math.abs(d.index - sampleNode) <= layer + 1;
+                });
+                
+                setTimeout(() => {
+                    anonElements.nodes.classed('highlighted', false);
+                    // 模拟每层聚合推断一些节点
+                    inferredCount += 3;
+                    updateInfoDisplay();
+                }, 1500);
+                
+                currentStep++;
+                layer++;
+                updateInfoDisplay();
+            }, 2000);
+        }
+        
+        // ========== k-匿名化动画 ==========
+        function animateKAnonymity() {
+            // 初始化统计
+            totalSteps = 5; // 5个阶段
+            currentStep = 0;
+            
+            d3.select('#anim-status').style('display', 'block');
+            updateInfoDisplay();
+            let phase = 0;
+            
+            animationInterval = setInterval(() => {
+                if (phase === 0) {
+                    d3.select('#anim-status').text('分析度数分布...');
+                    // 高亮不同度数的节点
+                    anonElements.nodes
+                        .transition()
+                        .duration(800)
+                        .attr('r', d => Math.max(8, Math.sqrt(d.degree) * 3))
+                        .style('opacity', 0.8);
+                    currentStep++;
+                    updateInfoDisplay();
+                } else if (phase === 1) {
+                    d3.select('#anim-status').text('识别度数独特的节点（需要匿名化）...');
+                    // 高亮度数独特的节点
+                    anonElements.nodes.classed('highlighted', d => d.degree > 10 || d.degree < 3);
+                    currentStep++;
+                    updateInfoDisplay();
+                } else if (phase === 2) {
+                    d3.select('#anim-status').text('添加边以增加度数...');
+                    // 添加一些绿色虚线边
+                    for (let i = 0; i < 10; i++) {
+                        const idx1 = Math.floor(Math.random() * DATA.graph.nodes.length);
+                        const idx2 = Math.floor(Math.random() * DATA.graph.nodes.length);
+                        if (idx1 !== idx2) {
+                            const n1 = DATA.graph.nodes[idx1];
+                            const n2 = DATA.graph.nodes[idx2];
+                            if (n1 && n2) {
+                                anonElements.g.append('line')
+                                    .attr('class', 'link added')
+                                    .attr('x1', n1.x)
+                                    .attr('y1', n1.y)
+                                    .attr('x2', n2.x)
+                                    .attr('y2', n2.y)
+                                    .attr('opacity', 0)
+                                    .transition()
+                                    .duration(500)
+                                    .attr('opacity', 0.7);
+                            }
+                        }
+                    }
+                    currentStep++;
+                    updateInfoDisplay();
+                } else if (phase === 3) {
+                    d3.select('#anim-status').text('删除边以降低度数...');
+                    // 标记一些边为删除
+                    anonElements.links
+                        .filter((d, i) => i % 5 === 0)
+                        .classed('removed', true)
+                        .transition()
+                        .duration(500)
+                        .attr('opacity', 0.3);
+                    currentStep++;
+                    updateInfoDisplay();
+                } else {
+                    d3.select('#anim-status').text('k-匿名化完成！度数分布已平滑');
+                    anonElements.nodes.classed('highlighted', false);
+                    d3.select('#play-btn').text('✓ 完成');
+                    isPlaying = false;
+                    clearInterval(animationInterval);
+                    currentStep++;
+                    updateInfoDisplay();
+                }
+                
+                phase++;
+            }, 2000);
+        }
+        
+        // ========== 噪声注入动画 ==========
+        function animateNoiseInjection() {
+            // 初始化统计
+            totalSteps = 3; // 3个阶段
+            currentStep = 0;
+            
+            d3.select('#anim-status').style('display', 'block');
+            updateInfoDisplay();
+            let phase = 0;
+            
+            animationInterval = setInterval(() => {
+                if (phase === 0) {
+                    d3.select('#anim-status').text('注入虚假节点...');
+                    // 添加紫色的虚假节点（在现有节点位置附近）
+                    const fakeNodes = [];
+                    for (let i = 0; i < 8; i++) {
+                        const baseNode = DATA.graph.nodes[i];
+                        fakeNodes.push({
+                            x: baseNode.x + (Math.random() - 0.5) * 100,
+                            y: baseNode.y + (Math.random() - 0.5) * 100,
+                            fake: true
+                        });
+                    }
+                    
+                    anonElements.g.selectAll('.fake-node')
+                        .data(fakeNodes)
+                        .join('circle')
+                        .attr('class', 'fake-node node')
+                        .attr('cx', d => d.x)
+                        .attr('cy', d => d.y)
+                        .attr('r', 0)
+                        .attr('fill', '#9C27B0')
+                        .attr('opacity', 0)
+                        .transition()
+                        .duration(800)
+                        .attr('r', 8)
+                        .attr('opacity', 0.7);
+                    
+                    currentStep++;
+                    updateInfoDisplay();
+                        
+                } else if (phase === 1) {
+                    d3.select('#anim-status').text('注入虚假边...');
+                    // 添加黄色虚线边
+                    for (let i = 0; i < 15; i++) {
+                        const idx1 = Math.floor(Math.random() * DATA.graph.nodes.length);
+                        const idx2 = Math.floor(Math.random() * DATA.graph.nodes.length);
+                        if (idx1 !== idx2) {
+                            const n1 = DATA.graph.nodes[idx1];
+                            const n2 = DATA.graph.nodes[idx2];
+                            if (n1 && n2) {
+                                anonElements.g.append('line')
+                                    .attr('x1', n1.x)
+                                    .attr('y1', n1.y)
+                                    .attr('x2', n2.x)
+                                    .attr('y2', n2.y)
+                                    .attr('stroke', '#FFC107')
+                                    .attr('stroke-width', 2)
+                                    .attr('stroke-dasharray', '5,5')
+                                    .attr('opacity', 0)
+                                    .transition()
+                                    .duration(500)
+                                    .attr('opacity', 0.6);
+                            }
+                        }
+                    }
+                    currentStep++;
+                    updateInfoDisplay();
+                } else if (phase === 2) {
+                    d3.select('#anim-status').text('扰动完成！攻击者难以区分真假');
+                    d3.select('#play-btn').text('✓ 完成');
+                    isPlaying = false;
+                    clearInterval(animationInterval);
+                    currentStep++;
+                    updateInfoDisplay();
+                }
+                
+                phase++;
+            }, 2500);
+        }
+        
+        // 全局统计变量
+        let totalSteps = 0;
+        let successCount = 0;
+        let inferredCount = 0;
+        
+        function updateInfoDisplay() {
+            const infoGrid = document.getElementById('info-display');
+            
+            // 根据不同阶段和方法显示不同的统计信息
+            let statLabel = '';
+            let statValue = 0;
+            
+            if (currentStage === 1) {
+                // 阶段一：身份去匿名化
+                statLabel = '匹配成功';
+                statValue = successCount;
+            } else if (currentStage === 2) {
+                // 阶段二：属性推断
+                statLabel = '已推断';
+                statValue = inferredCount;
+            } else if (currentStage === 3) {
+                // 阶段三：防御
+                statLabel = '扰动边数';
+                statValue = currentStep;
+            }
+            
+            // 计算完成度
+            let progress = totalSteps > 0 ? ((currentStep / totalSteps) * 100).toFixed(0) : 0;
+            
+            infoGrid.innerHTML = `
+                <div class="info-item">
+                    <div class="info-value">${DATA.meta.nodes}</div>
+                    <div class="info-label">节点数</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-value">${currentStep}/${totalSteps}</div>
+                    <div class="info-label">当前步骤</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-value">${statValue}</div>
+                    <div class="info-label">${statLabel}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-value">${progress}%</div>
+                    <div class="info-label">完成度</div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社交网络隐私保护 - 交互式仪表板</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #06A77D;
+            --danger-color: #C73E1D;
+            --warning-color: #F18F01;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            padding-bottom: 50px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header Styles */
+        .header {
+            background: white;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            border-radius: 15px;
+            margin-bottom: 30px;
+            animation: slideDown 0.6s ease-out;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            background: var(--bg-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 15px;
+        }
+        
+        .header .subtitle {
+            font-size: 1.3em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .header .dataset-info {
+            display: inline-block;
+            padding: 10px 25px;
+            background: var(--bg-gradient);
+            color: white;
+            border-radius: 25px;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        
+        /* Navigation */
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .nav-tab {
+            padding: 15px 30px;
+            background: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: var(--primary-color);
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .nav-tab:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .nav-tab.active {
+            background: var(--bg-gradient);
+            color: white;
+        }
+        
+        /* Section Styles */
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        .section-title {
+            font-size: 2.5em;
+            color: var(--secondary-color);
+            margin-bottom: 30px;
+            text-align: center;
+            position: relative;
+            padding-bottom: 15px;
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 4px;
+            background: var(--bg-gradient);
+            border-radius: 2px;
+        }
+        
+        /* Overview Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .stat-card {
+            padding: 30px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            text-align: center;
+            transition: transform 0.3s ease;
+            animation: popIn 0.6s ease-out backwards;
+        }
+        
+        .stat-card:nth-child(1) { animation-delay: 0.1s; }
+        .stat-card:nth-child(2) { animation-delay: 0.2s; }
+        .stat-card:nth-child(3) { animation-delay: 0.3s; }
+        .stat-card:nth-child(4) { animation-delay: 0.4s; }
+        
+        .stat-card:hover {
+            transform: translateY(-10px) scale(1.05);
+        }
+        
+        .stat-card h3 {
+            color: var(--secondary-color);
+            font-size: 1.2em;
+            margin-bottom: 15px;
+        }
+        
+        .stat-value {
+            font-size: 3em;
+            font-weight: bold;
+            background: var(--bg-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 10px 0;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        /* Three Steps Animation */
+        .steps-container {
+            display: flex;
+            justify-content: space-around;
+            margin: 50px 0;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+        
+        .step-card {
+            flex: 1;
+            min-width: 280px;
+            padding: 30px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.5s ease;
+            animation: slideUp 0.8s ease-out backwards;
+        }
+        
+        .step-card:nth-child(1) {
+            animation-delay: 0.2s;
+            border-top: 5px solid #667eea;
+        }
+        .step-card:nth-child(2) {
+            animation-delay: 0.4s;
+            border-top: 5px solid #F18F01;
+        }
+        .step-card:nth-child(3) {
+            animation-delay: 0.6s;
+            border-top: 5px solid #06A77D;
+        }
+        
+        .step-card:hover {
+            transform: translateY(-15px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+        }
+        
+        .step-number {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 50px;
+            height: 50px;
+            background: var(--bg-gradient);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        
+        .step-icon {
+            font-size: 4em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .step-title {
+            font-size: 1.5em;
+            color: var(--secondary-color);
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .step-description {
+            color: #666;
+            line-height: 1.6;
+            text-align: center;
+        }
+        
+        .step-animation {
+            margin-top: 20px;
+            height: 150px;
+            position: relative;
+            border-top: 2px dashed #ddd;
+            padding-top: 20px;
+        }
+        
+        /* Battle Animation */
+        .battle-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 40px;
+            margin: 50px 0;
+            flex-wrap: wrap;
+        }
+        
+        .battle-side {
+            flex: 1;
+            min-width: 300px;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .battle-side.attack {
+            background: linear-gradient(135deg, #C73E1D 0%, #F18F01 100%);
+            color: white;
+            animation: pulse 2s infinite;
+        }
+        
+        .battle-side.defense {
+            background: linear-gradient(135deg, #06A77D 0%, #45B7D1 100%);
+            color: white;
+            animation: pulse 2s infinite 1s;
+        }
+        
+        .battle-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+        }
+        
+        .battle-title {
+            font-size: 2em;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        
+        .battle-score {
+            font-size: 3em;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        
+        .battle-middle {
+            flex: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .battle-vs {
+            font-size: 3em;
+            font-weight: bold;
+            color: white;
+            background: var(--secondary-color);
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: rotate 4s linear infinite;
+        }
+        
+        .battle-arrow {
+            font-size: 3em;
+            color: white;
+            animation: bounce 1s infinite alternate;
+        }
+        
+        /* Methods Comparison */
+        .methods-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 40px 0;
+        }
+        
+        .method-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%);
+            border-radius: 15px;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+        
+        .method-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: var(--bg-gradient);
+        }
+        
+        .method-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+        
+        .method-name {
+            font-size: 1.4em;
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .method-metrics {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .metric-label {
+            color: #666;
+            font-size: 0.95em;
+        }
+        
+        .metric-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .metric-bar {
+            height: 10px;
+            background: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .metric-fill {
+            height: 100%;
+            background: var(--bg-gradient);
+            border-radius: 5px;
+            transition: width 1s ease-out;
+        }
+        
+        /* Charts Container */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .chart-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .chart-title {
+            font-size: 1.5em;
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes popIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            70% {
+                transform: scale(1.1);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            }
+        }
+        
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-10px); }
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Node Animation in Steps */
+        .node {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        .node:nth-child(1) { left: 10%; top: 30%; animation-delay: 0s; }
+        .node:nth-child(2) { left: 30%; top: 60%; animation-delay: 0.5s; }
+        .node:nth-child(3) { left: 50%; top: 20%; animation-delay: 1s; }
+        .node:nth-child(4) { left: 70%; top: 70%; animation-delay: 1.5s; }
+        .node:nth-child(5) { left: 90%; top: 40%; animation-delay: 2s; }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0) scale(1); opacity: 0.6; }
+            50% { transform: translateY(-20px) scale(1.2); opacity: 1; }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .steps-container,
+            .battle-container {
+                flex-direction: column;
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+</head>
+<body>
+    
+    <div class="header">
+        <h1>🔐 社交网络隐私保护</h1>
+        <div class="subtitle">从攻击到防御的完整研究</div>
+        <div class="dataset-info">数据集: CORA | 节点: 2708 | 边: 5278</div>
+        <p style="margin-top: 15px; color: #999;">生成时间: 2025-12-31 16:28:49</p>
+    </div>
+
+    
+    <div class="nav-tabs">
+        <button class="nav-tab active" onclick="showSection('overview')">📊 概览</button>
+        <button class="nav-tab" onclick="showSection('three-steps')">🔍 三步骤原理</button>
+        <button class="nav-tab" onclick="showSection('battle')">⚔️ 攻防对抗</button>
+        <button class="nav-tab" onclick="showSection('methods')">🧪 方法对比</button>
+        <button class="nav-tab" onclick="showSection('results')">📈 详细结果</button>
+    </div>
+
+    
+    <div class="container">
+        
+    <div class="section active" id="overview">
+        <h2 class="section-title">实验结果概览</h2>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>🎯 身份去匿名化</h3>
+                <div class="stat-value">97.3%</div>
+                <div class="stat-label">最佳攻击准确率</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>🔍 属性推断</h3>
+                <div class="stat-value">84.2%</div>
+                <div class="stat-label">最佳推断准确率</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>💪 鲁棒性临界点</h3>
+                <div class="stat-value">90%</div>
+                <div class="stat-label">图完整度阈值</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>🛡️ 推荐防御参数</h3>
+                <div class="stat-value">ε=0.1</div>
+                <div class="stat-label">差分隐私预算</div>
+            </div>
+        </div>
+    </div>
+
+        
+    <div class="section" id="three-steps">
+        <h2 class="section-title">🔍 三步骤攻击原理演示</h2>
+        
+        <div class="steps-container">
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-icon">🎯</div>
+                <div class="step-title">身份去匿名化</div>
+                <div class="step-description">
+                    通过结构指纹识别，将匿名图中的节点映射回原始身份。利用度序列、邻居结构等特征进行匹配。
+                </div>
+                <div class="step-animation">
+                    <div class="node"></div>
+                    <div class="node"></div>
+                    <div class="node"></div>
+                    <div class="node"></div>
+                    <div class="node"></div>
+                </div>
+            </div>
+            
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-icon">🔎</div>
+                <div class="step-title">属性推断攻击</div>
+                <div class="step-description">
+                    基于已知的部分节点属性和图结构，推断其他节点的敏感属性。利用标签传播和图神经网络。
+                </div>
+                <div class="step-animation">
+                    <div class="node"></div>
+                    <div class="node"></div>
+                    <div class="node"></div>
+                    <div class="node"></div>
+                    <div class="node"></div>
+                </div>
+            </div>
+            
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <div class="step-icon">🛡️</div>
+                <div class="step-title">隐私防御机制</div>
+                <div class="step-description">
+                    采用差分隐私、K-匿名性、特征扰动等技术，在保持图效用的同时降低隐私泄露风险。
+                </div>
+                <div class="step-animation">
+                    <div class="node"></div>
+                    <div class="node"></div>
+                    <div class="node"></div>
+                    <div class="node"></div>
+                    <div class="node"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 50px; padding: 30px; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 15px;">
+            <h3 style="text-align: center; color: var(--secondary-color); margin-bottom: 20px; font-size: 1.8em;">工作流程</h3>
+            <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 20px;">
+                <div style="text-align: center;">
+                    <div style="width: 100px; height: 100px; background: var(--bg-gradient); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 2em; margin: 0 auto 10px;">📊</div>
+                    <div>原始社交网络</div>
+                </div>
+                <div style="font-size: 2em; color: var(--primary-color);">→</div>
+                <div style="text-align: center;">
+                    <div style="width: 100px; height: 100px; background: var(--bg-gradient); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 2em; margin: 0 auto 10px;">🎭</div>
+                    <div>匿名化处理</div>
+                </div>
+                <div style="font-size: 2em; color: var(--primary-color);">→</div>
+                <div style="text-align: center;">
+                    <div style="width: 100px; height: 100px; background: var(--bg-gradient); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 2em; margin: 0 auto 10px;">⚔️</div>
+                    <div>多维度攻击</div>
+                </div>
+                <div style="font-size: 2em; color: var(--primary-color);">→</div>
+                <div style="text-align: center;">
+                    <div style="width: 100px; height: 100px; background: var(--bg-gradient); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 2em; margin: 0 auto 10px;">🛡️</div>
+                    <div>防御评估</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        
+    <div class="section" id="battle">
+        <h2 class="section-title">⚔️ 攻击 vs 防御对抗演示</h2>
+        
+        <div class="battle-container">
+            <div class="battle-side attack">
+                <div class="battle-icon">⚔️</div>
+                <div class="battle-title">攻击方</div>
+                <div class="battle-score">97.3%</div>
+                <div>最高攻击成功率</div>
+                <div style="margin-top: 20px; font-size: 0.9em;">
+                    <div>✓ 结构指纹识别</div>
+                    <div>✓ 节点特征匹配</div>
+                    <div>✓ 图对齐算法</div>
+                </div>
+            </div>
+            
+            <div class="battle-middle">
+                <div class="battle-vs">VS</div>
+                <div class="battle-arrow">⬇️</div>
+                <div style="color: white; font-size: 1.2em; font-weight: bold;">动态博弈</div>
+            </div>
+            
+            <div class="battle-side defense">
+                <div class="battle-icon">🛡️</div>
+                <div class="battle-title">防御方</div>
+                <div class="battle-score">99.7%</div>
+                <div>隐私保护强度</div>
+                <div style="margin-top: 20px; font-size: 0.9em;">
+                    <div>✓ 差分隐私</div>
+                    <div>✓ K-匿名性</div>
+                    <div>✓ 特征扰动</div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 50px; text-align: center; padding: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; color: white;">
+            <h3 style="font-size: 2em; margin-bottom: 20px;">💡 关键洞察</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; margin-top: 30px;">
+                <div style="background: rgba(255,255,255,0.1); padding: 25px; border-radius: 10px;">
+                    <div style="font-size: 2.5em; margin-bottom: 10px;">🎯</div>
+                    <div style="font-size: 1.3em; font-weight: bold;">攻击多样性</div>
+                    <div style="margin-top: 10px; opacity: 0.9;">结构+特征组合攻击更有效</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 25px; border-radius: 10px;">
+                    <div style="font-size: 2.5em; margin-bottom: 10px;">⚖️</div>
+                    <div style="font-size: 1.3em; font-weight: bold;">隐私-效用权衡</div>
+                    <div style="margin-top: 10px; opacity: 0.9;">需要在保护和可用性间平衡</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 25px; border-radius: 10px;">
+                    <div style="font-size: 2.5em; margin-bottom: 10px;">🔄</div>
+                    <div style="font-size: 1.3em; font-weight: bold;">动态防御策略</div>
+                    <div style="margin-top: 10px; opacity: 0.9;">根据威胁调整防御强度</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        
+    <div class="section" id="methods">
+        <h2 class="section-title">🧪 攻击方法性能对比</h2>
+        
+        <div class="methods-grid">
+            
+            <div class="method-card">
+                <div class="method-name">Baseline-Greedy</div>
+                <div class="method-metrics">
+                    <div>
+                        <div class="metric-row">
+                            <span class="metric-label">准确率</span>
+                            <span class="metric-value">13.8%</span>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: 13.798621368783849%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="metric-row">
+                            <span class="metric-label">Precision@5</span>
+                            <span class="metric-value">29.7%</span>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: 29.652880354505168%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="metric-row">
+                            <span class="metric-label">MRR</span>
+                            <span class="metric-value">21.2%</span>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: 21.213047946806938%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="method-card">
+                <div class="method-name">Hungarian</div>
+                <div class="method-metrics">
+                    <div>
+                        <div class="metric-row">
+                            <span class="metric-label">准确率</span>
+                            <span class="metric-value">16.7%</span>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: 16.69128508124077%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="metric-row">
+                            <span class="metric-label">Precision@5</span>
+                            <span class="metric-value">31.3%</span>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: 31.26538650910881%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="metric-row">
+                            <span class="metric-label">MRR</span>
+                            <span class="metric-value">23.3%</span>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: 23.3081997733389%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="method-card">
+                <div class="method-name">Node-Features</div>
+                <div class="method-metrics">
+                    <div>
+                        <div class="metric-row">
+                            <span class="metric-label">准确率</span>
+                            <span class="metric-value">97.2%</span>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: 97.20580994583949%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="metric-row">
+                            <span class="metric-label">Precision@5</span>
+                            <span class="metric-value">99.3%</span>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: 99.34761201378632%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="metric-row">
+                            <span class="metric-label">MRR</span>
+                            <span class="metric-value">98.2%</span>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: 98.15909379886486%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="method-card">
+                <div class="method-name">DeepWalk</div>
+                <div class="method-metrics">
+                    <div>
+                        <div class="metric-row">
+                            <span class="metric-label">准确率</span>
+                            <span class="metric-value">0.0%</span>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: 0.0%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="metric-row">
+                            <span class="metric-label">Precision@5</span>
+                            <span class="metric-value">0.1%</span>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: 0.13540128015755784%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="metric-row">
+                            <span class="metric-label">MRR</span>
+                            <span class="metric-value">0.1%</span>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: 0.09715168739599277%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+        
+    <div class="section" id="results">
+        <h2 class="section-title">📈 详细实验结果</h2>
+        
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="chart-title">身份去匿名化结果</div>
+                <canvas id="deanonChart"></canvas>
+            </div>
+            
+            <div class="chart-card">
+                <div class="chart-title">属性推断结果</div>
+                <canvas id="attrChart"></canvas>
+            </div>
+            
+            <div class="chart-card">
+                <div class="chart-title">鲁棒性测试</div>
+                <canvas id="robustChart"></canvas>
+            </div>
+            
+            <div class="chart-card">
+                <div class="chart-title">防御效果评估</div>
+                <canvas id="defenseChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    </div>
+    
+    
+    <script>
+        // 导航切换功能
+        function showSection(sectionId) {
+            // 隐藏所有部分
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // 显示选中的部分
+            document.getElementById(sectionId).classList.add('active');
+            
+            // 更新导航标签状态
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+        
+        // 图表配置
+        const chartColors = {
+            primary: 'rgba(102, 126, 234, 0.8)',
+            secondary: 'rgba(118, 75, 162, 0.8)',
+            success: 'rgba(6, 167, 125, 0.8)',
+            danger: 'rgba(199, 62, 29, 0.8)',
+            warning: 'rgba(241, 143, 1, 0.8)'
+        };
+        
+        // 创建去匿名化图表
+        const deanonCtx = document.getElementById('deanonChart');
+        if (deanonCtx) {
+            new Chart(deanonCtx, {
+                type: 'bar',
+                data: {
+                    labels: ["Baseline-Greedy", "Hungarian", "Node-Features", "DeepWalk"],
+                    datasets: [{
+                        label: '准确率 (%)',
+                        data: [29.098966026587885, 34.23190546528804, 97.04579025110783, 0.0],
+                        backgroundColor: chartColors.primary,
+                        borderColor: chartColors.primary.replace('0.8', '1'),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: '准确率 (%)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 创建属性推断图表
+        const attrCtx = document.getElementById('attrChart');
+        if (attrCtx) {
+            new Chart(attrCtx, {
+                type: 'bar',
+                data: {
+                    labels: ["Neighbor-Voting<br>(30% hidden)", "Label-Propagation<br>(30% hidden)", "GraphSAGE<br>(30% hidden)", "Neighbor-Voting<br>(50% hidden)", "Label-Propagation<br>(50% hidden)", "GraphSAGE<br>(50% hidden)", "Neighbor-Voting<br>(70% hidden)", "Label-Propagation<br>(70% hidden)", "GraphSAGE<br>(70% hidden)"],
+                    datasets: [{
+                        label: '准确率 (%)',
+                        data: [77.95566502463053, 84.23645320197043, 82.41082410824109, 71.63958641063516, 81.75775480059085, 82.12703101920236, 57.889182058047496, 77.99472295514512, 79.11392405063292],
+                        backgroundColor: chartColors.warning,
+                        borderColor: chartColors.warning.replace('0.8', '1'),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: '准确率 (%)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 创建鲁棒性图表
+        const robustCtx = document.getElementById('robustChart');
+        if (robustCtx) {
+            new Chart(robustCtx, {
+                type: 'line',
+                data: {
+                    labels: ["90%", "80%", "70%", "50%"],
+                    datasets: [{
+                        label: '攻击准确率 (%)',
+                        data: [9.416543574593796, 9.67503692762186, 7.791728212703101, 6.019202363367799],
+                        backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                        borderColor: chartColors.primary,
+                        borderWidth: 3,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '图完整度 (%)'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '准确率 (%)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 创建防御效果图表
+        const defenseCtx = document.getElementById('defenseChart');
+        if (defenseCtx) {
+            new Chart(defenseCtx, {
+                type: 'line',
+                data: {
+                    labels: ["\u03b5=0.1", "\u03b5=0.5", "\u03b5=1.0", "\u03b5=2.0"],
+                    datasets: [{
+                        label: '效用保持 (%)',
+                        data: [99.65675182073501, 99.72826072128773, 99.80795453987392, 99.91337628414543],
+                        backgroundColor: 'rgba(6, 167, 125, 0.2)',
+                        borderColor: chartColors.success,
+                        borderWidth: 3,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: '效用 (%)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 页面加载完成后的动画
+        window.addEventListener('load', function() {
+            // 触发进度条动画
+            setTimeout(() => {
+                document.querySelectorAll('.metric-fill').forEach(bar => {
+                    bar.style.width = bar.style.width;
+                });
+            }, 500);
+        });
+    </script>
+
+</body>
+</html>

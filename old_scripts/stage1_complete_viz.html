@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>第一阶段：身份去匿名化完整原理演示</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        header h1 {
+            font-size: 1.6em;
+            margin-bottom: 5px;
+        }
+        
+        .content-wrapper {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .viz-panel {
+            flex: 0 0 70%;
+            padding: 20px;
+            overflow-y: auto;
+            background: white;
+        }
+        
+        .control-panel {
+            flex: 0 0 30%;
+            background: #f8f9fa;
+            border-left: 3px solid #e9ecef;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        
+        .method-selector {
+            padding: 20px;
+            background: white;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .method-selector h2 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #495057;
+        }
+        
+        .method-btn {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            background: white;
+            color: #495057;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+        
+        .method-btn:hover {
+            background: #f8f9fa;
+            border-color: #667eea;
+        }
+        
+        .method-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .principle-box {
+            padding: 20px;
+            background: #e7f3ff;
+            margin: 20px 0;
+            border-radius: 10px;
+            border-left: 5px solid #007bff;
+        }
+        
+        .principle-box h3 {
+            color: #004085;
+            margin-bottom: 15px;
+        }
+        
+        .principle-box .formula {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin: 10px 0;
+            border: 1px solid #b8daff;
+        }
+        
+        .viz-container {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .viz-container h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .matrix-container {
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+        
+        .matrix-cell {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            margin: 1px;
+            text-align: center;
+            line-height: 40px;
+            font-size: 0.8em;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .matrix-cell.selected {
+            border: 3px solid #ff6b6b;
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+        }
+        
+        .graph-svg {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        
+        .scatter-svg {
+            width: 100%;
+            height: 400px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        
+        .controls {
+            padding: 20px;
+            background: white;
+            border-top: 2px solid #e9ecef;
+        }
+        
+        .control-btn {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .control-btn.play {
+            background: #28a745;
+            color: white;
+        }
+        
+        .control-btn.play:hover {
+            background: #218838;
+        }
+        
+        .control-btn.reset {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .control-btn.reset:hover {
+            background: #5a6268;
+        }
+        
+        .step-info {
+            padding: 20px;
+            background: white;
+        }
+        
+        .step-info h3 {
+            color: #495057;
+            margin-bottom: 15px;
+        }
+        
+        .step-detail {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #667eea;
+        }
+        
+        .step-detail.current {
+            background: #e7f3ff;
+            border-left-color: #007bff;
+        }
+        
+        .node {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .node.highlighted {
+            stroke: #ff6b6b;
+            stroke-width: 4px;
+            r: 10;
+        }
+        
+        .node.matched {
+            stroke: #51cf66;
+            stroke-width: 4px;
+        }
+        
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+            stroke-width: 2;
+        }
+        
+        .link.walk-path {
+            stroke: #ff6b6b;
+            stroke-width: 3;
+            stroke-opacity: 1;
+        }
+        
+        .walk-path-line {
+            stroke: #ff6b6b;
+            stroke-width: 3;
+            fill: none;
+            opacity: 0;
+        }
+        
+        .walk-path-line.active {
+            opacity: 1;
+            animation: dash 2s linear;
+        }
+        
+        @keyframes dash {
+            from {
+                stroke-dashoffset: 1000;
+            }
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+        
+        .stats-box {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .stats-box .stat-item {
+            margin: 8px 0;
+            font-size: 0.95em;
+        }
+        
+        .stats-box .stat-value {
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        
+        .tooltip {
+            position: absolute;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            border-radius: 5px;
+            pointer-events: none;
+            font-size: 0.9em;
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <header>
+            <h1>🔬 第一阶段：身份去匿名化完整原理演示</h1>
+            <p>深入理解四种攻击方法的工作原理 - 包含动画演示</p>
+        </header>
+        
+        <div class="content-wrapper">
+            <!-- 左侧：可视化展示 -->
+            <div class="viz-panel">
+                <div id="loading" class="loading">
+                    <h2>加载演示数据中...</h2>
+                    <p>请稍候</p>
+                </div>
+                
+                <div id="content" style="display: none;">
+                    <div class="principle-box" id="principle-box"></div>
+                    <div id="viz-area"></div>
+                </div>
+            </div>
+            
+            <!-- 右侧：控制面板 -->
+            <div class="control-panel">
+                <div class="method-selector">
+                    <h2>选择演示方法</h2>
+                    <button class="method-btn active" data-method="greedy">
+                        方法1: 贪心特征匹配
+                    </button>
+                    <button class="method-btn" data-method="hungarian">
+                        方法2: 匈牙利算法
+                    </button>
+                    <button class="method-btn" data-method="graph_kernel">
+                        方法3: 图核方法
+                    </button>
+                    <button class="method-btn" data-method="deepwalk">
+                        方法4: DeepWalk嵌入
+                    </button>
+                </div>
+                
+                <div class="step-info" id="step-info">
+                    <h3>算法步骤</h3>
+                    <div id="step-details"></div>
+                </div>
+                
+                <div class="controls">
+                    <button class="control-btn play" id="play-btn">▶️ 开始动画</button>
+                    <button class="control-btn reset" id="reset-btn">🔄 重置</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="tooltip" id="tooltip"></div>
+    
+    <script>
+        let DATA = null;
+        let currentMethod = 'greedy';
+        let currentStep = 0;
+        let isPlaying = false;
+        let playInterval = null;
+        
+        // 加载数据
+        async function loadData() {
+            try {
+                const response = await fetch('stage1_demo_data.json');
+                DATA = await response.json();
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+                initMethod('greedy');
+            } catch (error) {
+                document.getElementById('loading').innerHTML = 
+                    '<h2 style="color: red;">加载失败</h2><p>请确保 stage1_demo_data.json 文件存在</p>';
+                console.error('Error loading data:', error);
+            }
+        }
+        
+        // 初始化方法选择器
+        document.querySelectorAll('.method-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                const method = e.target.dataset.method;
+                currentMethod = method;
+                currentStep = 0;
+                stopAnimation();
+                initMethod(method);
+            });
+        });
+        
+        // 控制按钮
+        document.getElementById('play-btn').addEventListener('click', () => {
+            if (isPlaying) {
+                stopAnimation();
+            } else {
+                startAnimation();
+            }
+        });
+        
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            stopAnimation();
+            currentStep = 0;
+            initMethod(currentMethod);
+        });
+        
+        // 初始化方法
+        function initMethod(method) {
+            const principleBox = document.getElementById('principle-box');
+            const vizArea = document.getElementById('viz-area');
+            
+            if (method === 'greedy') {
+                initGreedyMethod();
+            } else if (method === 'hungarian') {
+                initHungarianMethod();
+            } else if (method === 'graph_kernel') {
+                initGraphKernelMethod();
+            } else if (method === 'deepwalk') {
+                initDeepWalkMethod();
+            }
+        }
+        
+        // ========== 方法1: 贪心匹配 ==========
+        function initGreedyMethod() {
+            const data = DATA.method1_greedy;
+            
+            document.getElementById('principle-box').innerHTML = `
+                <h3>🔬 贪心特征匹配原理</h3>
+                <div class="formula">
+步骤1: 计算特征向量<br>
+f(v) = [degree(v), clustering(v), triangles(v), ...]
+                </div>
+                <div class="formula">
+步骤2: 计算相似度矩阵<br>
+S[i][j] = cosine_similarity(f(v_i), f(v'_j))
+                </div>
+                <div class="formula">
+步骤3: 贪心选择<br>
+while 存在未匹配节点:<br>
+&nbsp;&nbsp;(i*, j*) = argmax S[i][j]<br>
+&nbsp;&nbsp;匹配 v_i* → v'_j*<br>
+&nbsp;&nbsp;删除第i*行和第j*列
+                </div>
+            `;
+            
+            document.getElementById('viz-area').innerHTML = `
+                <div class="viz-container">
+                    <h3>相似度矩阵热力图</h3>
+                    <div id="similarity-matrix"></div>
+                </div>
+                <div class="viz-container">
+                    <h3>图可视化</h3>
+                    <svg id="graph-viz" class="graph-svg"></svg>
+                </div>
+            `;
+            
+            renderSimilarityMatrix(data);
+            renderGraphViz(DATA.graph_orig, DATA.graph_anon);
+            updateGreedySteps(0);
+        }
+        
+        function renderSimilarityMatrix(data) {
+            const container = document.getElementById('similarity-matrix');
+            const matrix = data.similarity_matrix;
+            const size = Math.min(matrix.length, 10); // 只显示10x10
+            
+            let html = '<div style="display: inline-block;">';
+            
+            // 添加列标题
+            html += '<div style="margin-left: 45px;">';
+            for (let j = 0; j < size; j++) {
+                html += `<div class="matrix-cell" style="width: 45px; height: 30px; line-height: 30px; font-weight: bold;">v'_${j}</div>`;
+            }
+            html += '</div>';
+            
+            for (let i = 0; i < size; i++) {
+                html += '<div style="white-space: nowrap;">';
+                // 行标题
+                html += `<div class="matrix-cell" style="width: 40px; display: inline-block; font-weight: bold;">v_${i}</div>`;
+                
+                for (let j = 0; j < size; j++) {
+                    const value = matrix[i][j];
+                    const color = getHeatmapColor(value);
+                    html += `<div class="matrix-cell" id="cell-${i}-${j}" 
+                             style="background: ${color};"
+                             title="v_${i} → v'_${j}: ${value.toFixed(3)}">
+                             ${value.toFixed(2)}
+                             </div>`;
+                }
+                html += '</div>';
+            }
+            html += '</div>';
+            
+            container.innerHTML = html;
+        }
+        
+        function getHeatmapColor(value) {
+            // 值范围 0-1，映射到颜色
+            const r = Math.floor((1 - value) * 255);
+            const g = Math.floor(value * 200);
+            const b = Math.floor(value * 100);
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+        
+        function updateGreedySteps(stepIdx) {
+            const data = DATA.method1_greedy;
+            const stepDetails = document.getElementById('step-details');
+            
+            stepDetails.innerHTML = '';
+            
+            data.steps.forEach((step, idx) => {
+                const div = document.createElement('div');
+                div.className = 'step-detail' + (idx === stepIdx ? ' current' : '');
+                div.innerHTML = `
+                    <strong>步骤 ${step.step}:</strong><br>
+                    匹配: v_${step.orig_node} → v'_${step.anon_node}<br>
+                    相似度: ${(step.similarity * 100).toFixed(1)}%<br>
+                    ${step.is_correct ? '✅ 正确' : '❌ 错误'}
+                `;
+                stepDetails.appendChild(div);
+            });
+        }
+        
+        function animateGreedyStep(stepIdx) {
+            const data = DATA.method1_greedy;
+            if (stepIdx >= data.steps.length) {
+                stopAnimation();
+                return;
+            }
+            
+            const step = data.steps[stepIdx];
+            updateGreedySteps(stepIdx);
+            
+            // 高亮矩阵单元格
+            document.querySelectorAll('.matrix-cell.selected').forEach(cell => {
+                cell.classList.remove('selected');
+            });
+            
+            // 找到对应的单元格并高亮
+            const origIdx = data.nodes_orig.indexOf(step.orig_node);
+            const anonIdx = data.nodes_anon.indexOf(step.anon_node);
+            const cell = document.getElementById(`cell-${origIdx}-${anonIdx}`);
+            if (cell) {
+                cell.classList.add('selected');
+            }
+            
+            currentStep = stepIdx + 1;
+        }
+        
+        // ========== 方法2: 匈牙利算法 ==========
+        function initHungarianMethod() {
+            const data = DATA.method2_hungarian;
+            
+            document.getElementById('principle-box').innerHTML = `
+                <h3>🔬 匈牙利算法原理</h3>
+                <div class="formula">
+步骤1: 转换为成本矩阵<br>
+C[i][j] = -S[i][j]
+                </div>
+                <div class="formula">
+步骤2: 行归约<br>
+每行减去该行最小值
+                </div>
+                <div class="formula">
+步骤3: 列归约<br>
+每列减去该列最小值
+                </div>
+                <div class="formula">
+步骤4: 求解最优匹配<br>
+使用匈牙利算法找到最小成本完美匹配
+                </div>
+            `;
+            
+            document.getElementById('viz-area').innerHTML = `
+                <div class="viz-container">
+                    <h3 id="matrix-title">成本矩阵</h3>
+                    <div id="cost-matrix"></div>
+                </div>
+                <div class="viz-container">
+                    <h3>最终匹配结果</h3>
+                    <div id="matching-result"></div>
+                </div>
+            `;
+            
+            renderCostMatrix(data, 0);
+            renderMatchingResult(data);
+            updateHungarianSteps(0);
+        }
+        
+        function renderCostMatrix(data, stepIdx) {
+            const container = document.getElementById('cost-matrix');
+            let matrix;
+            
+            if (stepIdx === 0) {
+                matrix = data.cost_matrix_initial;
+            } else if (stepIdx < data.steps.length) {
+                matrix = data.steps[stepIdx].matrix;
+            } else {
+                return;
+            }
+            
+            const size = Math.min(matrix.length, 10);
+            let html = '<div style="display: inline-block;">';
+            
+            for (let i = 0; i < size; i++) {
+                html += '<div style="white-space: nowrap;">';
+                for (let j = 0; j < size; j++) {
+                    const value = matrix[i][j];
+                    const color = getCostColor(value);
+                    html += `<div class="matrix-cell" 
+                             style="background: ${color};">
+                             ${value.toFixed(2)}
+                             </div>`;
+                }
+                html += '</div>';
+            }
+            html += '</div>';
+            
+            container.innerHTML = html;
+        }
+        
+        function getCostColor(value) {
+            // 成本值，越小越好（绿色），越大越差（红色）
+            const normalized = Math.max(0, Math.min(1, (value + 1) / 2));
+            const r = Math.floor(normalized * 255);
+            const g = Math.floor((1 - normalized) * 200);
+            return `rgb(${r}, ${g}, 100)`;
+        }
+        
+        function renderMatchingResult(data) {
+            const container = document.getElementById('matching-result');
+            let html = '<div class="stats-box">';
+            
+            let correct = 0;
+            let total = 0;
+            
+            for (const [origNode, matchInfo] of Object.entries(data.final_matching)) {
+                total++;
+                if (matchInfo.is_correct) correct++;
+                
+                html += `<div class="stat-item">
+                    v_${origNode} → v'_${matchInfo.matched_node} 
+                    (${(matchInfo.similarity * 100).toFixed(1)}%)
+                    ${matchInfo.is_correct ? '✅' : '❌'}
+                </div>`;
+            }
+            
+            html += `<hr style="margin: 15px 0;">`;
+            html += `<div class="stat-item">
+                总匹配数: <span class="stat-value">${total}</span>
+            </div>`;
+            html += `<div class="stat-item">
+                正确匹配: <span class="stat-value">${correct}</span>
+            </div>`;
+            html += `<div class="stat-item">
+                准确率: <span class="stat-value">${(correct/total*100).toFixed(1)}%</span>
+            </div>`;
+            html += '</div>';
+            
+            container.innerHTML = html;
+        }
+        
+        function updateHungarianSteps(stepIdx) {
+            const data = DATA.method2_hungarian;
+            const stepDetails = document.getElementById('step-details');
+            
+            stepDetails.innerHTML = '';
+            
+            data.steps.forEach((step, idx) => {
+                const div = document.createElement('div');
+                div.className = 'step-detail' + (idx === stepIdx ? ' current' : '');
+                div.innerHTML = `
+                    <strong>步骤 ${step.step}: ${step.name}</strong><br>
+                    ${step.description}
+                `;
+                stepDetails.appendChild(div);
+            });
+        }
+        
+        function animateHungarianStep(stepIdx) {
+            const data = DATA.method2_hungarian;
+            if (stepIdx >= data.steps.length) {
+                stopAnimation();
+                return;
+            }
+            
+            const step = data.steps[stepIdx];
+            document.getElementById('matrix-title').textContent = 
+                `成本矩阵 - ${step.name}`;
+            
+            renderCostMatrix(data, stepIdx);
+            updateHungarianSteps(stepIdx);
+            
+            currentStep = stepIdx + 1;
+        }
+        
+        // ========== 方法3: 图核方法 ==========
+        function initGraphKernelMethod() {
+            const data = DATA.method3_graph_kernel;
+            
+            document.getElementById('principle-box').innerHTML = `
+                <h3>🔬 图核方法（WL核）原理</h3>
+                <div class="formula">
+步骤1: 提取局部子图<br>
+对于节点v: 提取1-hop和2-hop邻居
+                </div>
+                <div class="formula">
+步骤2: Weisfeiler-Lehman核迭代<br>
+初始化: label(v) = degree(v)<br>
+迭代: label(v) ← hash(label(v) + sort([label(u) for u in N(v)]))
+                </div>
+                <div class="formula">
+步骤3: 计算核相似度<br>
+kernel(v_i, v'_j) = 标签分布的相似度
+                </div>
+            `;
+            
+            document.getElementById('viz-area').innerHTML = `
+                <div class="viz-container">
+                    <h3>子图可视化</h3>
+                    <svg id="subgraph-viz" class="graph-svg"></svg>
+                </div>
+                <div class="viz-container">
+                    <h3>WL核迭代过程</h3>
+                    <div id="wl-iterations"></div>
+                </div>
+            `;
+            
+            renderSubgraphs(data);
+            renderWLIterations(data, 0);
+            updateGraphKernelSteps(0);
+        }
+        
+        function renderSubgraphs(data) {
+            const svg = d3.select('#subgraph-viz');
+            const width = svg.node().clientWidth;
+            const height = svg.node().clientHeight;
+            
+            svg.selectAll('*').remove();
+            
+            if (data.subgraph_examples.length === 0) return;
+            
+            const example = data.subgraph_examples[0];
+            
+            // 构建子图数据
+            const nodes = [{id: example.node, type: 'center'}];
+            example['1hop_neighbors'].forEach(n => {
+                nodes.push({id: n, type: '1hop'});
+            });
+            
+            const links = example['1hop_edges'].map(e => ({
+                source: e[0],
+                target: e[1]
+            }));
+            
+            // 力导向布局
+            const simulation = d3.forceSimulation(nodes)
+                .force('link', d3.forceLink(links).id(d => d.id).distance(80))
+                .force('charge', d3.forceManyBody().strength(-200))
+                .force('center', d3.forceCenter(width / 2, height / 2));
+            
+            const link = svg.append('g')
+                .selectAll('line')
+                .data(links)
+                .join('line')
+                .attr('class', 'link');
+            
+            const node = svg.append('g')
+                .selectAll('circle')
+                .data(nodes)
+                .join('circle')
+                .attr('class', 'node')
+                .attr('r', d => d.type === 'center' ? 12 : 8)
+                .attr('fill', d => d.type === 'center' ? '#ff6b6b' : '#4dabf7')
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 2);
+            
+            const label = svg.append('g')
+                .selectAll('text')
+                .data(nodes)
+                .join('text')
+                .text(d => d.id)
+                .attr('font-size', 10)
+                .attr('dx', 15)
+                .attr('dy', 4);
+            
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                
+                node
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+                
+                label
+                    .attr('x', d => d.x)
+                    .attr('y', d => d.y);
+            });
+            
+            setTimeout(() => simulation.stop(), 3000);
+        }
+        
+        function renderWLIterations(data, iterIdx) {
+            const container = document.getElementById('wl-iterations');
+            
+            if (iterIdx >= data.wl_iterations.length) {
+                stopAnimation();
+                return;
+            }
+            
+            const iteration = data.wl_iterations[iterIdx];
+            
+            let html = `<div class="stats-box">`;
+            html += `<h4>迭代 ${iteration.iteration}</h4>`;
+            html += `<p>${iteration.description}</p>`;
+            html += `<hr style="margin: 10px 0;">`;
+            
+            const labels = Object.entries(iteration.labels).slice(0, 10);
+            labels.forEach(([node, label]) => {
+                html += `<div class="stat-item">节点 ${node}: 标签 = ${label}</div>`;
+            });
+            
+            html += `</div>`;
+            
+            container.innerHTML = html;
+        }
+        
+        function updateGraphKernelSteps(stepIdx) {
+            const data = DATA.method3_graph_kernel;
+            const stepDetails = document.getElementById('step-details');
+            
+            stepDetails.innerHTML = '';
+            
+            data.wl_iterations.forEach((iter, idx) => {
+                const div = document.createElement('div');
+                div.className = 'step-detail' + (idx === stepIdx ? ' current' : '');
+                div.innerHTML = `
+                    <strong>迭代 ${iter.iteration}</strong><br>
+                    ${iter.description}
+                `;
+                stepDetails.appendChild(div);
+            });
+        }
+        
+        function animateGraphKernelStep(stepIdx) {
+            const data = DATA.method3_graph_kernel;
+            if (stepIdx >= data.wl_iterations.length) {
+                stopAnimation();
+                return;
+            }
+            
+            renderWLIterations(data, stepIdx);
+            updateGraphKernelSteps(stepIdx);
+            
+            currentStep = stepIdx + 1;
+        }
+        
+        // ========== 方法4: DeepWalk ==========
+        function initDeepWalkMethod() {
+            const data = DATA.method4_deepwalk;
+            
+            document.getElementById('principle-box').innerHTML = `
+                <h3>🔬 DeepWalk图嵌入原理</h3>
+                <div class="formula">
+步骤1: 随机游走采样<br>
+对每个节点v: 进行γ次长度为t的随机游走
+                </div>
+                <div class="formula">
+步骤2: Skip-gram训练<br>
+目标: max Σ log P(neighbors(v) | v)<br>
+学习节点嵌入向量 φ(v)
+                </div>
+                <div class="formula">
+步骤3: 嵌入空间匹配<br>
+相似度 = cos(emb(v_i), emb(v'_j))
+                </div>
+            `;
+            
+            document.getElementById('viz-area').innerHTML = `
+                <div class="viz-container">
+                    <h3>随机游走路径</h3>
+                    <svg id="walk-viz" class="graph-svg"></svg>
+                </div>
+                <div class="viz-container">
+                    <h3>2D嵌入空间</h3>
+                    <svg id="embedding-viz" class="scatter-svg"></svg>
+                </div>
+            `;
+            
+            renderWalkViz(data);
+            renderEmbeddingSpace(data);
+            updateDeepWalkSteps(0);
+        }
+        
+        function renderWalkViz(data) {
+            const svg = d3.select('#walk-viz');
+            const width = svg.node().clientWidth;
+            const height = svg.node().clientHeight;
+            
+            svg.selectAll('*').remove();
+            
+            // 使用原始图
+            const graphData = DATA.graph_orig;
+            
+            const simulation = d3.forceSimulation(graphData.nodes)
+                .force('link', d3.forceLink(graphData.links).id(d => d.index).distance(60))
+                .force('charge', d3.forceManyBody().strength(-150))
+                .force('center', d3.forceCenter(width / 2, height / 2));
+            
+            const link = svg.append('g')
+                .selectAll('line')
+                .data(graphData.links)
+                .join('line')
+                .attr('class', 'link');
+            
+            const node = svg.append('g')
+                .selectAll('circle')
+                .data(graphData.nodes)
+                .join('circle')
+                .attr('class', 'node')
+                .attr('r', 6)
+                .attr('fill', '#4dabf7')
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 2);
+            
+            const label = svg.append('g')
+                .selectAll('text')
+                .data(graphData.nodes)
+                .join('text')
+                .text(d => d.id)
+                .attr('font-size', 9)
+                .attr('dx', 10)
+                .attr('dy', 3);
+            
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                
+                node
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+                
+                label
+                    .attr('x', d => d.x)
+                    .attr('y', d => d.y);
+            });
+            
+            setTimeout(() => simulation.stop(), 3000);
+            
+            // 存储节点位置供后续动画使用
+            setTimeout(() => {
+                window.walkNodePositions = {};
+                graphData.nodes.forEach(n => {
+                    window.walkNodePositions[n.id] = {x: n.x, y: n.y};
+                });
+            }, 3000);
+        }
+        
+        function renderEmbeddingSpace(data) {
+            const svg = d3.select('#embedding-viz');
+            const width = svg.node().clientWidth;
+            const height = svg.node().clientHeight;
+            
+            svg.selectAll('*').remove();
+            
+            // 获取嵌入坐标
+            const origPoints = [];
+            const anonPoints = [];
+            
+            for (const [node, coord] of Object.entries(data.embedding_2d)) {
+                if (node.startsWith('anon_')) {
+                    anonPoints.push({id: node.replace('anon_', ''), ...coord, type: 'anon'});
+                } else {
+                    origPoints.push({id: node, ...coord, type: 'orig'});
+                }
+            }
+            
+            // 缩放
+            const xExtent = d3.extent([...origPoints, ...anonPoints], d => d.x);
+            const yExtent = d3.extent([...origPoints, ...anonPoints], d => d.y);
+            
+            const xScale = d3.scaleLinear()
+                .domain(xExtent)
+                .range([50, width - 50]);
+            
+            const yScale = d3.scaleLinear()
+                .domain(yExtent)
+                .range([height - 50, 50]);
+            
+            // 绘制原始图节点
+            svg.append('g')
+                .selectAll('circle')
+                .data(origPoints)
+                .join('circle')
+                .attr('cx', d => xScale(d.x))
+                .attr('cy', d => yScale(d.y))
+                .attr('r', 5)
+                .attr('fill', '#4dabf7')
+                .attr('opacity', 0.7)
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 1);
+            
+            // 绘制匿名图节点
+            svg.append('g')
+                .selectAll('circle')
+                .data(anonPoints)
+                .join('circle')
+                .attr('cx', d => xScale(d.x))
+                .attr('cy', d => yScale(d.y))
+                .attr('r', 5)
+                .attr('fill', '#ff6b6b')
+                .attr('opacity', 0.7)
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 1);
+            
+            // 添加图例
+            const legend = svg.append('g')
+                .attr('transform', `translate(${width - 120}, 20)`);
+            
+            legend.append('circle')
+                .attr('cx', 0)
+                .attr('cy', 0)
+                .attr('r', 5)
+                .attr('fill', '#4dabf7');
+            
+            legend.append('text')
+                .attr('x', 10)
+                .attr('y', 5)
+                .text('原始图')
+                .attr('font-size', 12);
+            
+            legend.append('circle')
+                .attr('cx', 0)
+                .attr('cy', 25)
+                .attr('r', 5)
+                .attr('fill', '#ff6b6b');
+            
+            legend.append('text')
+                .attr('x', 10)
+                .attr('y', 30)
+                .text('匿名图')
+                .attr('font-size', 12);
+        }
+        
+        function updateDeepWalkSteps(stepIdx) {
+            const data = DATA.method4_deepwalk;
+            const stepDetails = document.getElementById('step-details');
+            
+            stepDetails.innerHTML = '';
+            
+            data.random_walks.forEach((walkData, idx) => {
+                const div = document.createElement('div');
+                div.className = 'step-detail' + (idx === stepIdx ? ' current' : '');
+                
+                let walksHtml = '';
+                walkData.walks.forEach((walk, wIdx) => {
+                    walksHtml += `<div style="margin: 5px 0; font-size: 0.85em;">
+                        游走${wIdx + 1}: ${walk.path.slice(0, 5).join(' → ')}...
+                    </div>`;
+                });
+                
+                div.innerHTML = `
+                    <strong>节点 ${walkData.start_node}</strong><br>
+                    ${walksHtml}
+                `;
+                stepDetails.appendChild(div);
+            });
+        }
+        
+        function animateDeepWalkStep(stepIdx) {
+            const data = DATA.method4_deepwalk;
+            if (stepIdx >= data.random_walks.length) {
+                stopAnimation();
+                return;
+            }
+            
+            const walkData = data.random_walks[stepIdx];
+            updateDeepWalkSteps(stepIdx);
+            
+            // 在图上高亮显示游走路径
+            if (window.walkNodePositions) {
+                const svg = d3.select('#walk-viz');
+                
+                // 清除之前的路径
+                svg.selectAll('.walk-path-line').remove();
+                
+                // 绘制第一条游走路径
+                const walk = walkData.walks[0];
+                const pathCoords = walk.path.map(nodeId => {
+                    const pos = window.walkNodePositions[nodeId];
+                    return pos ? [pos.x, pos.y] : null;
+                }).filter(c => c !== null);
+                
+                if (pathCoords.length > 1) {
+                    const line = d3.line()
+                        .x(d => d[0])
+                        .y(d => d[1]);
+                    
+                    svg.append('path')
+                        .attr('class', 'walk-path-line active')
+                        .attr('d', line(pathCoords))
+                        .attr('stroke-dasharray', '5,5');
+                }
+            }
+            
+            currentStep = stepIdx + 1;
+        }
+        
+        // ========== 动画控制 ==========
+        function startAnimation() {
+            isPlaying = true;
+            document.getElementById('play-btn').innerHTML = '⏸️ 暂停';
+            
+            playInterval = setInterval(() => {
+                if (currentMethod === 'greedy') {
+                    animateGreedyStep(currentStep);
+                } else if (currentMethod === 'hungarian') {
+                    animateHungarianStep(currentStep);
+                } else if (currentMethod === 'graph_kernel') {
+                    animateGraphKernelStep(currentStep);
+                } else if (currentMethod === 'deepwalk') {
+                    animateDeepWalkStep(currentStep);
+                }
+            }, 2000);
+        }
+        
+        function stopAnimation() {
+            isPlaying = false;
+            document.getElementById('play-btn').innerHTML = '▶️ 开始动画';
+            if (playInterval) {
+                clearInterval(playInterval);
+                playInterval = null;
+            }
+        }
+        
+        // 通用图可视化
+        function renderGraphViz(graphOrig, graphAnon) {
+            const svg = d3.select('#graph-viz');
+            if (svg.empty()) return;
+            
+            const width = svg.node().clientWidth;
+            const height = svg.node().clientHeight;
+            
+            svg.selectAll('*').remove();
+            
+            const simulation = d3.forceSimulation(graphOrig.nodes)
+                .force('link', d3.forceLink(graphOrig.links).id(d => d.index).distance(50))
+                .force('charge', d3.forceManyBody().strength(-150))
+                .force('center', d3.forceCenter(width / 2, height / 2));
+            
+            const link = svg.append('g')
+                .selectAll('line')
+                .data(graphOrig.links)
+                .join('line')
+                .attr('class', 'link');
+            
+            const node = svg.append('g')
+                .selectAll('circle')
+                .data(graphOrig.nodes)
+                .join('circle')
+                .attr('class', 'node')
+                .attr('r', d => 5 + d.degree * 0.5)
+                .attr('fill', '#4dabf7')
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 2);
+            
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                
+                node
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+            });
+            
+            setTimeout(() => simulation.stop(), 3000);
+        }
+        
+        // 启动
+        loadData();
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
