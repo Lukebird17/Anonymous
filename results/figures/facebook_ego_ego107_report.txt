@@ -1,8 +1,8 @@
 ======================================================================
 Experiment Results Summary Report
-Generated: 2026-01-04 19:36:15
+Generated: 2026-01-10 05:03:42
 Dataset: facebook_ego
-Results File: results/unified/facebook_ego_ego107_20260104_185924.json
+Results File: results/unified/facebook_ego_ego107_20260110_045043.json
 ======================================================================
 
 [Graph Statistics]
@@ -14,73 +14,73 @@ Results File: results/unified/facebook_ego_ego107_20260104_185924.json
 [De-anonymization Attack Results]
 
 Mild - Greedy:
-  Top-1 Accuracy: 19.44%
-  Precision@5: 47.29%
-  MRR: 0.3205
-  Improvement: 201x
+  Top-1 Accuracy: 18.47%
+  Precision@5: 44.29%
+  MRR: 0.3032
+  Improvement: 191x
 
 Mild - Hungarian:
-  Top-1 Accuracy: 7.93%
-  Precision@5: 22.92%
-  MRR: 0.1609
-  Improvement: 82x
+  Top-1 Accuracy: 9.38%
+  Precision@5: 25.24%
+  MRR: 0.1713
+  Improvement: 97x
 
 Mild - Graph-Kernel:
-  Top-1 Accuracy: 7.64%
-  Precision@5: 20.70%
-  MRR: 0.1467
-  Improvement: 79x
+  Top-1 Accuracy: 9.19%
+  Precision@5: 23.60%
+  MRR: 0.1594
+  Improvement: 95x
 
 Mild - DeepWalk:
-  Top-1 Accuracy: 0.29%
-  Precision@5: 0.48%
-  MRR: 0.0043
-  Improvement: 3x
-
-Moderate - Greedy:
-  Top-1 Accuracy: 7.16%
-  Precision@5: 24.08%
-  MRR: 0.1564
-  Improvement: 74x
-
-Moderate - Hungarian:
-  Top-1 Accuracy: 1.35%
-  Precision@5: 7.45%
-  MRR: 0.0472
-  Improvement: 14x
-
-Moderate - Graph-Kernel:
-  Top-1 Accuracy: 0.97%
-  Precision@5: 4.35%
-  MRR: 0.0311
-  Improvement: 10x
-
-Moderate - DeepWalk:
   Top-1 Accuracy: 0.10%
   Precision@5: 0.68%
   MRR: 0.0039
   Improvement: 1x
 
+Moderate - Greedy:
+  Top-1 Accuracy: 7.54%
+  Precision@5: 25.92%
+  MRR: 0.1604
+  Improvement: 78x
+
+Moderate - Hungarian:
+  Top-1 Accuracy: 2.13%
+  Precision@5: 7.06%
+  MRR: 0.0489
+  Improvement: 22x
+
+Moderate - Graph-Kernel:
+  Top-1 Accuracy: 0.77%
+  Precision@5: 3.68%
+  MRR: 0.0291
+  Improvement: 8x
+
+Moderate - DeepWalk:
+  Top-1 Accuracy: 0.10%
+  Precision@5: 0.68%
+  MRR: 0.0044
+  Improvement: 1x
+
 Strong - Greedy:
-  Top-1 Accuracy: 3.58%
-  Precision@5: 12.57%
-  MRR: 0.0841
-  Improvement: 37x
+  Top-1 Accuracy: 3.48%
+  Precision@5: 14.60%
+  MRR: 0.0918
+  Improvement: 36x
 
 Strong - Hungarian:
-  Top-1 Accuracy: 0.87%
-  Precision@5: 3.29%
-  MRR: 0.0243
-  Improvement: 9x
+  Top-1 Accuracy: 0.68%
+  Precision@5: 4.16%
+  MRR: 0.0255
+  Improvement: 7x
 
 Strong - Graph-Kernel:
-  Top-1 Accuracy: 0.39%
-  Precision@5: 1.74%
-  MRR: 0.0140
-  Improvement: 4x
+  Top-1 Accuracy: 0.68%
+  Precision@5: 2.51%
+  MRR: 0.0182
+  Improvement: 7x
 
 Strong - DeepWalk:
-  Top-1 Accuracy: 0.29%
-  Precision@5: 0.77%
-  MRR: 0.0060
-  Improvement: 3x
+  Top-1 Accuracy: 0.00%
+  Precision@5: 0.10%
+  MRR: 0.0011
+  Improvement: 0x
