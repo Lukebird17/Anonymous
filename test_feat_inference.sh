@@ -24,3 +24,8 @@ python3 visualize_feat_inference.py
 echo ""
 echo "✅ 所有测试完成！"
 
+
+
+
+
+
