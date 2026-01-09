@@ -1,0 +1,275 @@
+{
+  "dataset": "facebook_ego",
+  "ego_id": "0",
+  "timestamp": "2026-01-10T02:08:31.188869",
+  "graph_stats": {
+    "nodes": 333,
+    "edges": 2519,
+    "avg_degree": 15.12912912912913,
+    "density": 0.045569666051593766,
+    "nodes_with_attributes": 348,
+    "has_labels": false,
+    "has_circles": true,
+    "has_features": true
+  },
+  "attribute_inference": [
+    {
+      "hide_ratio": 0.3,
+      "method": "Neighbor-Voting",
+      "label_type": "Circles",
+      "accuracy": 0.5060240963855421,
+      "correct": 42,
+      "total": 83,
+      "random_baseline": 0.043478260869565216
+    },
+    {
+      "hide_ratio": 0.3,
+      "method": "Label-Propagation",
+      "label_type": "Circles",
+      "accuracy": 0.5421686746987951,
+      "correct": 45,
+      "total": 83,
+      "iterations": 3,
+      "random_baseline": 0.043478260869565216
+    },
+    {
+      "hide_ratio": 0.3,
+      "method": "GraphSAGE",
+      "label_type": "Circles",
+      "accuracy": 0.5357142857142857,
+      "correct": 45,
+      "total": 84,
+      "f1_macro": 0.33453248897729,
+      "f1_micro": 0.5357142857142857,
+      "train_nodes": 193,
+      "random_baseline": 0.043478260869565216
+    },
+    {
+      "hide_ratio": 0.3,
+      "method": "MGN",
+      "label_type": "Circles",
+      "accuracy": 0.5,
+      "correct": 42,
+      "total": 84,
+      "f1_macro": 0.1393725875229817,
+      "f1_micro": 0.5,
+      "train_nodes": 193,
+      "random_baseline": 0.043478260869565216
+    },
+    {
+      "hide_ratio": 0.3,
+      "method": "Neighbor-Voting",
+      "label_type": "Feat",
+      "accuracy": 0.696969696969697,
+      "correct": 69,
+      "total": 99,
+      "random_baseline": 0.6714697406340058
+    },
+    {
+      "hide_ratio": 0.3,
+      "method": "Label-Propagation",
+      "label_type": "Feat",
+      "accuracy": 0.7070707070707071,
+      "correct": 70,
+      "total": 99,
+      "iterations": 3,
+      "random_baseline": 0.6714697406340058
+    },
+    {
+      "hide_ratio": 0.3,
+      "method": "GraphSAGE",
+      "label_type": "Feat",
+      "accuracy": 1.0,
+      "correct": 100,
+      "total": 100,
+      "f1_macro": 1.0,
+      "f1_micro": 1.0,
+      "train_nodes": 233,
+      "random_baseline": 0.6714697406340058
+    },
+    {
+      "hide_ratio": 0.3,
+      "method": "MGN",
+      "label_type": "Feat",
+      "accuracy": 0.949999988079071,
+      "correct": 94,
+      "total": 100,
+      "f1_macro": 0.9358233859581568,
+      "f1_micro": 0.95,
+      "train_nodes": 233,
+      "random_baseline": 0.6714697406340058
+    },
+    {
+      "hide_ratio": 0.5,
+      "method": "Neighbor-Voting",
+      "label_type": "Circles",
+      "accuracy": 0.5289855072463768,
+      "correct": 73,
+      "total": 138,
+      "random_baseline": 0.043478260869565216
+    },
+    {
+      "hide_ratio": 0.5,
+      "method": "Label-Propagation",
+      "label_type": "Circles",
+      "accuracy": 0.5217391304347826,
+      "correct": 72,
+      "total": 138,
+      "iterations": 3,
+      "random_baseline": 0.043478260869565216
+    },
+    {
+      "hide_ratio": 0.5,
+      "method": "GraphSAGE",
+      "label_type": "Circles",
+      "accuracy": 0.4676258992805755,
+      "correct": 65,
+      "total": 139,
+      "f1_macro": 0.20658801982331393,
+      "f1_micro": 0.4676258992805755,
+      "train_nodes": 138,
+      "random_baseline": 0.043478260869565216
+    },
+    {
+      "hide_ratio": 0.5,
+      "method": "MGN",
+      "label_type": "Circles",
+      "accuracy": 0.5179856419563293,
+      "correct": 72,
+      "total": 139,
+      "f1_macro": 0.11182255867379079,
+      "f1_micro": 0.5179856115107914,
+      "train_nodes": 138,
+      "random_baseline": 0.043478260869565216
+    },
+    {
+      "hide_ratio": 0.5,
+      "method": "Neighbor-Voting",
+      "label_type": "Feat",
+      "accuracy": 0.6807228915662651,
+      "correct": 113,
+      "total": 166,
+      "random_baseline": 0.6714697406340058
+    },
+    {
+      "hide_ratio": 0.5,
+      "method": "Label-Propagation",
+      "label_type": "Feat",
+      "accuracy": 0.6686746987951807,
+      "correct": 111,
+      "total": 166,
+      "iterations": 3,
+      "random_baseline": 0.6714697406340058
+    },
+    {
+      "hide_ratio": 0.5,
+      "method": "GraphSAGE",
+      "label_type": "Feat",
+      "accuracy": 0.9880239520958084,
+      "correct": 165,
+      "total": 167,
+      "f1_macro": 0.9853816526610644,
+      "f1_micro": 0.9880239520958084,
+      "train_nodes": 166,
+      "random_baseline": 0.6714697406340058
+    },
+    {
+      "hide_ratio": 0.5,
+      "method": "MGN",
+      "label_type": "Feat",
+      "accuracy": 0.9640718698501587,
+      "correct": 161,
+      "total": 167,
+      "f1_macro": 0.9555851063829788,
+      "f1_micro": 0.9640718562874252,
+      "train_nodes": 166,
+      "random_baseline": 0.6714697406340058
+    },
+    {
+      "hide_ratio": 0.7,
+      "method": "Neighbor-Voting",
+      "label_type": "Circles",
+      "accuracy": 0.538860103626943,
+      "correct": 104,
+      "total": 193,
+      "random_baseline": 0.043478260869565216
+    },
+    {
+      "hide_ratio": 0.7,
+      "method": "Label-Propagation",
+      "label_type": "Circles",
+      "accuracy": 0.5647668393782384,
+      "correct": 109,
+      "total": 193,
+      "iterations": 4,
+      "random_baseline": 0.043478260869565216
+    },
+    {
+      "hide_ratio": 0.7,
+      "method": "GraphSAGE",
+      "label_type": "Circles",
+      "accuracy": 0.4845360824742268,
+      "correct": 94,
+      "total": 194,
+      "f1_macro": 0.14276135355327899,
+      "f1_micro": 0.4845360824742268,
+      "train_nodes": 83,
+      "random_baseline": 0.043478260869565216
+    },
+    {
+      "hide_ratio": 0.7,
+      "method": "MGN",
+      "label_type": "Circles",
+      "accuracy": 0.42268040776252747,
+      "correct": 81,
+      "total": 194,
+      "f1_macro": 0.09542169995707932,
+      "f1_micro": 0.422680412371134,
+      "train_nodes": 83,
+      "random_baseline": 0.043478260869565216
+    },
+    {
+      "hide_ratio": 0.7,
+      "method": "Neighbor-Voting",
+      "label_type": "Feat",
+      "accuracy": 0.6266094420600858,
+      "correct": 146,
+      "total": 233,
+      "random_baseline": 0.6714697406340058
+    },
+    {
+      "hide_ratio": 0.7,
+      "method": "Label-Propagation",
+      "label_type": "Feat",
+      "accuracy": 0.6223175965665236,
+      "correct": 145,
+      "total": 233,
+      "iterations": 3,
+      "random_baseline": 0.6714697406340058
+    },
+    {
+      "hide_ratio": 0.7,
+      "method": "GraphSAGE",
+      "label_type": "Feat",
+      "accuracy": 0.9529914529914529,
+      "correct": 223,
+      "total": 234,
+      "f1_macro": 0.9472832654064349,
+      "f1_micro": 0.9529914529914529,
+      "train_nodes": 99,
+      "random_baseline": 0.6714697406340058
+    },
+    {
+      "hide_ratio": 0.7,
+      "method": "MGN",
+      "label_type": "Feat",
+      "accuracy": 0.9529914855957031,
+      "correct": 223,
+      "total": 234,
+      "f1_macro": 0.9446153846153846,
+      "f1_micro": 0.9529914529914529,
+      "train_nodes": 99,
+      "random_baseline": 0.6714697406340058
+    }
+  ]
+}

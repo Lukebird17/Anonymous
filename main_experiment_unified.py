@@ -364,13 +364,14 @@ class UnifiedExperiment:
         self.results['deanonymization'] = results
         return results
     
-    def run_attribute_inference(self, hide_ratios=None, test_feat=True):
+    def run_attribute_inference(self, hide_ratios=None, test_feat=True, test_mgn=True):
         """
         运行属性推断攻击 - 支持Circles和Feat两种推断目标
         
         Args:
             hide_ratios: 隐藏标签的比例列表
             test_feat: 是否同时测试Feat特征推断
+            test_mgn: 是否测试MGN
         """
         print(f"\n{'='*70}")
         print("【阶段2】属性推断攻击")
@@ -478,7 +479,7 @@ class UnifiedExperiment:
             if circles_labels:
                 self._test_inference_on_labels(
                     circles_labels, hide_ratio, results, 
-                    label_type="Circles", test_graphsage=True
+                    label_type="Circles", test_graphsage=True, test_mgn=test_mgn
                 )
             
             # ===== 测试2: Feat标签推断 =====
@@ -488,7 +489,7 @@ class UnifiedExperiment:
                 print(f"{'─'*60}")
                 self._test_inference_on_labels(
                     feat_labels, hide_ratio, results,
-                    label_type="Feat", test_graphsage=True,  # ✅ 现在也测试GraphSAGE
+                    label_type="Feat", test_graphsage=True, test_mgn=test_mgn,  # ✅ 现在也测试GraphSAGE/MGN
                     feat_info=feat_info
                 )
         
@@ -496,7 +497,7 @@ class UnifiedExperiment:
         return results
     
     def _test_inference_on_labels(self, node_labels, hide_ratio, results, 
-                                   label_type="Circles", test_graphsage=True, feat_info=None):
+                                   label_type="Circles", test_graphsage=True, test_mgn=True, feat_info=None):
         """
         在给定标签集上测试属性推断
         
@@ -543,6 +544,16 @@ class UnifiedExperiment:
             random_baseline = 1.0 / len(unique_labels) if unique_labels else 0
             if len(unique_labels) > 0:
                 print(f"随机猜测基准: {random_baseline:.2%}")
+
+        # 准备包含当前标签的属性，供GNN方法复用
+        gnn_attributes = {}
+        for node in self.G.nodes():
+            if node in self.attributes and isinstance(self.attributes[node], dict):
+                gnn_attributes[node] = self.attributes[node].copy()
+            else:
+                gnn_attributes[node] = {}
+            if node in node_labels:
+                gnn_attributes[node]['label'] = str(node_labels[node])
         
         # 方法1: 邻居投票
         print(f"\n【方法1】邻居投票")
@@ -648,23 +659,7 @@ class UnifiedExperiment:
                 device = 'cuda' if torch.cuda.is_available() else 'cpu'
                 print(f"  使用设备: {device}")
                 
-                # 准备GraphSAGE需要的attributes字典
-                # 需要将node_labels中的标签添加到attributes中
-                graphsage_attributes = {}
-                for node in self.G.nodes():
-                    # 复制原始属性（包括features）
-                    if node in self.attributes:
-                        if isinstance(self.attributes[node], dict):
-                            graphsage_attributes[node] = self.attributes[node].copy()
-                        else:
-                            graphsage_attributes[node] = {}
-                    else:
-                        graphsage_attributes[node] = {}
-                    
-                    # 添加当前测试的标签（Feat或Circles）
-                    # 将标签转换为字符串，确保GraphSAGE能正确处理
-                    if node in node_labels:
-                        graphsage_attributes[node]['label'] = str(node_labels[node])
+                graphsage_attributes = gnn_attributes
                 
                 # 创建攻击器
                 graphsage_attacker = GraphSAGEAttributeInferenceAttack(self.G, graphsage_attributes)
@@ -706,6 +701,50 @@ class UnifiedExperiment:
                 print(f"  ⚠️  跳过GraphSAGE：需要安装PyTorch (pip install torch)")
             except Exception as e:
                 print(f"  ❌ GraphSAGE失败: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        # 方法4: MGN
+        if test_mgn:
+            print(f"\n【方法4】MGN图神经网络（与GraphSAGE对比）")
+            try:
+                from attack.graphsage_attribute_inference import MGNAttributeInferenceAttack
+                import torch
+
+                device = 'cuda' if torch.cuda.is_available() else 'cpu'
+                train_ratio = 1.0 - hide_ratio
+                mgn_attacker = MGNAttributeInferenceAttack(self.G, gnn_attributes)
+                mgn_results = mgn_attacker.run_attack(
+                    train_ratio=train_ratio,
+                    epochs=50,
+                    latent_dim=128,
+                    mgn_layers=2,
+                    mlp_hidden_layers=1,
+                    learning_rate=5e-4,
+                    edge_attr_dim=1,
+                    device=device
+                )
+
+                if mgn_results.get('accuracy', 0) > 0:
+                    print(f"  - 准确率: {mgn_results['accuracy']:.2%}")
+                    print(f"  - F1 (macro): {mgn_results['f1_macro']:.4f}")
+                    print(f"  - F1 (micro): {mgn_results['f1_micro']:.4f}")
+                    results.append({
+                        'hide_ratio': hide_ratio,
+                        'method': 'MGN',
+                        'label_type': label_type,
+                        'accuracy': mgn_results['accuracy'],
+                        'correct': int(mgn_results['accuracy'] * mgn_results.get('test_nodes', 0)),
+                        'total': mgn_results.get('test_nodes', 0),
+                        'f1_macro': mgn_results['f1_macro'],
+                        'f1_micro': mgn_results['f1_micro'],
+                        'train_nodes': mgn_results.get('train_nodes', 0),
+                        'random_baseline': random_baseline
+                    })
+                else:
+                    print(f"  MGN失败: {mgn_results.get('message', '未知错误')}")
+            except Exception as e:
+                print(f"  ❌ MGN失败: {e}")
                 import traceback
                 traceback.print_exc()
     
@@ -1003,5 +1042,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
