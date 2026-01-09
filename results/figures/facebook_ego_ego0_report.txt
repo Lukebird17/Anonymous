@@ -1,8 +1,8 @@
 ======================================================================
 Experiment Results Summary Report
-Generated: 2026-01-04 19:36:06
+Generated: 2026-01-10 04:30:31
 Dataset: facebook_ego
-Results File: results/unified/facebook_ego_ego0_20260104_190950.json
+Results File: results/unified/facebook_ego_ego0_20260110_020855_merged.json
 ======================================================================
 
 [Graph Statistics]

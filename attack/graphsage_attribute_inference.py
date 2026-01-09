@@ -14,6 +14,10 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from models.graphsage import GraphSAGETrainer
+from models.mgn import (
+    MGNTrainer,
+    build_homogeneous_data,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -245,6 +249,75 @@ class GraphSAGEAttributeInferenceAttack:
                 'f1_micro': 0.0,
                 'message': f'训练失败: {str(e)}'
             }
+
+
+class MGNAttributeInferenceAttack(GraphSAGEAttributeInferenceAttack):
+    """MGN 属性推断攻击器"""
+
+    def run_attack(
+        self,
+        train_ratio: float = 0.3,
+        epochs: int = 50,
+        latent_dim: int = 128,
+        mgn_layers: int = 2,
+        mlp_hidden_layers: int = 1,
+        learning_rate: float = 5e-4,
+        edge_attr_dim: int = 1,
+        device: str = 'cpu'
+    ) -> Dict:
+        node_features, node_labels, input_dim, num_classes = self.extract_features_and_labels()
+        if len(node_labels) == 0 or num_classes == 0:
+            return {
+                'accuracy': 0.0,
+                'f1_macro': 0.0,
+                'f1_micro': 0.0,
+                'message': '没有标签数据'
+            }
+
+        data, train_idx, test_idx = build_homogeneous_data(
+            self.G,
+            node_features,
+            node_labels,
+            input_dim=input_dim,
+            edge_attr_dim=edge_attr_dim,
+            train_ratio=train_ratio,
+        )
+        trainer = MGNTrainer(
+            data,
+            num_classes=num_classes,
+            edge_attr_dim=edge_attr_dim,
+            latent_dim=latent_dim,
+            mgn_layers=mgn_layers,
+            mlp_hidden_layers=mlp_hidden_layers,
+            learning_rate=learning_rate,
+            device=device,
+        )
+
+        trainer.train(epochs=epochs)
+        acc, y_true, y_pred = trainer.evaluate(mask_name='test_mask')
+
+        if y_true.size == 0:
+            return {
+                'accuracy': 0.0,
+                'f1_macro': 0.0,
+                'f1_micro': 0.0,
+                'train_nodes': len(train_idx),
+                'test_nodes': len(test_idx),
+                'message': '没有测试标签'
+            }
+
+        f1_macro = f1_score(y_true, y_pred, average='macro')
+        f1_micro = f1_score(y_true, y_pred, average='micro')
+
+        logger.info(f"MGN测试集准确率: {acc:.2%}, F1-macro: {f1_macro:.4f}, F1-micro: {f1_micro:.4f}")
+
+        return {
+            'accuracy': acc,
+            'f1_macro': f1_macro,
+            'f1_micro': f1_micro,
+            'train_nodes': len(train_idx),
+            'test_nodes': len(test_idx),
+        }
 
 
 def test_graphsage_on_cora():
