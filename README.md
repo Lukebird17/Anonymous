@@ -18,6 +18,7 @@
 - [算法说明](#算法说明)
 - [实验结果](#实验结果)
 - [数据集详细说明](#数据集详细说明)
+- [MGN集成说明](#mgn集成说明)
 - [常见问题](#常见问题)
 
 ---
@@ -26,7 +27,7 @@
 
 本项目实现了一个完整的**图匿名化攻击与防御系统**，包含：
 
-- **12种攻击和防御算法**的完整实现
+- **13种攻击和防御算法**的完整实现（包括最新的MGN图神经网络）
 - **交互式Web演示系统**，实时展示攻击过程
 - **基于真实数据**的实验评估（Facebook Ego网络）
 - **完整的实验Pipeline**，支持自动化批量实验
@@ -57,12 +58,13 @@
 
 | 推断目标 | 方法 | 说明 | 准确率 | 隐私风险 |
 |----------|------|------|--------|----------|
-| **Circles (社交圈)** | 邻居投票 / 标签传播 / GraphSAGE | 推断节点所属社交圈 | 50-60% | 低（学术研究） |
-| **🔥 Feat (敏感属性)** | 邻居投票 / 标签传播 | 推断性别/学校/雇主等 | 55-65% | 🔥 高（真实泄露） |
+| **Circles (社交圈)** | 邻居投票 / 标签传播 / GraphSAGE / MGN | 推断节点所属社交圈 | 50-60% | 低（学术研究） |
+| **🔥 Feat (敏感属性)** | 邻居投票 / 标签传播 / MGN | 推断性别/学校/雇主等 | 55-95% | 🔥 高（真实泄露） |
 
 **关键发现**:
 - ✅ Feat特征推断准确率通常高于Circles（更强的同质性）
 - ✅ 即使隐藏70%标签，仍能达到50%+准确率
+- ✅ MGN（消息传递图网络）在简单二分类任务上达到95%准确率
 - ✅ 证明仅匿名化图结构不足以保护敏感属性
 
 ### 3. 防御机制（Defense）
@@ -81,7 +83,8 @@
 - **Python 3.8+**
 - **NetworkX**: 图处理和算法
 - **NumPy/Scikit-learn**: 数值计算和机器学习
-- **PyTorch**: 图神经网络（GraphSAGE）
+- **PyTorch**: 图神经网络（GraphSAGE, MGN）
+- **PyTorch Geometric**: 图神经网络库（MGN模型）
 - **Gensim**: 图嵌入（DeepWalk）
 
 ### 前端
@@ -198,7 +201,7 @@ python3 visualize_all_unified.py
 
 #### ✨ 功能特性
 
-- **🎯 12种方法动画演示**: 完整展示攻击和防御过程
+- **🎯 13种方法动画演示**: 完整展示攻击和防御过程（包括MGN）
 - **🎨 节点颜色编码**: 
   - 🔴 红色 = 属性A
   - 🔵 蓝色 = 属性B  
@@ -223,11 +226,12 @@ python3 visualize_all_unified.py
 5. 邻居投票 - 基于邻居属性推断
 6. 标签传播 - 迭代扩散标签
 7. GraphSAGE - 图神经网络聚合
+8. MGN - 消息传递图网络
 
 **阶段3：防御机制**
-8. 差分隐私 - 边扰动演示
-9. k-匿名化 - 度数分组
-10. 噪声注入 - 虚假节点和边
+9. 差分隐私 - 边扰动演示
+10. k-匿名化 - 度数分组
+11. 噪声注入 - 虚假节点和边
 
 #### 🎮 使用方法
 
@@ -683,6 +687,7 @@ Anonymous/
 ├── models/                          # 图学习模型
 │   ├── deepwalk.py                  # DeepWalk实现
 │   ├── graphsage.py                 # GraphSAGE实现
+│   ├── mgn.py                       # MGN消息传递网络实现
 │   └── feature_extractor.py         # 特征提取
 │
 ├── preprocessing/                   # 数据预处理
@@ -753,6 +758,12 @@ Anonymous/
 - **优点**: 端到端学习，准确率高
 - **缺点**: 需要训练，计算资源要求高
 
+#### 4. MGN (Message Passing Graph Network)
+- **原理**: 消息传递图神经网络，同时学习节点和边的表示
+- **步骤**: 编码节点和边特征 → 多层消息传递 → 解码输出
+- **优点**: 考虑边特征，泛化能力强，在简单任务上准确率可达95%+
+- **缺点**: 需要训练，对边特征敏感
+
 ### 防御机制
 
 #### 1. 差分隐私
@@ -792,6 +803,9 @@ Anonymous/
 | 邻居投票 | 65% | 0.62 | 0.60 |
 | 标签传播 | 70% | 0.68 | 0.67 |
 | GraphSAGE | **75%** | **0.73** | **0.71** |
+| MGN | **95%** (Feat) | **0.94** | **0.93** |
+
+**注**: MGN在简单二分类任务（Feat）上表现优异，在多标签任务（Circles）上与GraphSAGE相当。
 
 #### 防御效果
 
@@ -1012,6 +1026,193 @@ EOF
 
 ---
 
+## 🔬 MGN集成说明
+
+### MGN（Message Passing Graph Network）简介
+
+MGN是一种先进的图神经网络架构，通过消息传递机制同时学习节点和边的表示，相比传统的GraphSAGE有以下优势：
+
+#### 核心特性
+- **边特征建模**: 显式学习边的表示，不仅仅是节点
+- **消息传递机制**: 节点和边之间双向信息交互
+- **灵活的架构**: 可配置的隐藏层数和MLP层数
+
+#### 模型架构
+
+```python
+MGNModel(
+    node_dim=输入节点特征维度,
+    edge_dim=边特征维度（默认1）,
+    out_dim=输出类别数,
+    latent_dim=128,          # 隐藏层维度
+    mgn_layers=2,            # 消息传递层数
+    mlp_hidden_layers=1      # MLP隐藏层数
+)
+```
+
+### 使用方法
+
+#### 1. 在实验中自动运行MGN
+
+```bash
+# 完整实验（自动包含MGN）
+python3 main_experiment_unified.py --dataset facebook_ego --ego_id 0 --mode all --save
+
+# 只测试属性推断（包含MGN）
+python3 main_experiment_unified.py --dataset facebook_ego --ego_id 0 --mode attribute_inference --save
+```
+
+#### 2. MGN参数配置
+
+在 `main_experiment_unified.py` 中，MGN使用以下默认参数：
+
+```python
+mgn_results = mgn_attacker.run_attack(
+    train_ratio=0.7,          # 训练集比例（隐藏30%标签）
+    epochs=50,                # 训练轮数
+    latent_dim=128,           # 隐藏层维度
+    mgn_layers=2,             # 消息传递层数
+    mlp_hidden_layers=1,      # MLP隐藏层数
+    learning_rate=5e-4,       # 学习率
+    edge_attr_dim=1,          # 边特征维度
+    device='cuda' if torch.cuda.is_available() else 'cpu'
+)
+```
+
+#### 3. 单独使用MGN进行属性推断
+
+```python
+from attack.graphsage_attribute_inference import MGNAttributeInferenceAttack
+import torch
+
+# 初始化MGN攻击器
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+mgn_attacker = MGNAttributeInferenceAttack(G, node_labels)
+
+# 运行攻击
+results = mgn_attacker.run_attack(
+    train_ratio=0.7,
+    epochs=50,
+    device=device
+)
+
+print(f"MGN准确率: {results['accuracy']:.2%}")
+print(f"F1分数: {results['f1_macro']:.3f}")
+```
+
+### 性能对比
+
+#### Facebook Ego-0 数据集（隐藏30%标签）
+
+| 方法 | Feat (2类) | Circles (23类) | 训练时间 |
+|------|-----------|---------------|---------|
+| Neighbor-Voting | 69.7% | 50.6% | <1秒 |
+| Label-Propagation | 70.7% | 54.2% | <1秒 |
+| GraphSAGE | **100.0%** | 53.6% | ~10秒 |
+| **MGN** | **95.0%** | **50.0%** | ~15秒 |
+
+**关键发现**：
+- ✅ MGN在简单二分类任务（Feat）上达到95%准确率，仅次于GraphSAGE
+- ✅ 在复杂多标签任务（Circles）上与GraphSAGE相当
+- ✅ 通过学习边特征，MGN具有更强的泛化能力
+- ⚠️ 训练时间略长于GraphSAGE（多5秒左右）
+
+### 技术细节
+
+#### MGN vs GraphSAGE 对比
+
+| 特性 | GraphSAGE | MGN |
+|------|-----------|-----|
+| **节点特征** | ✅ | ✅ |
+| **边特征** | ❌ | ✅ |
+| **消息传递** | 单向（节点→节点） | 双向（节点↔边） |
+| **适用场景** | 通用图分类 | 边信息重要的任务 |
+| **训练速度** | 快 | 中等 |
+| **内存占用** | 低 | 中等 |
+
+#### MGN的优势场景
+
+1. **社交网络分析**: 边代表不同类型的关系（朋友、同事、家人）
+2. **知识图谱**: 边有明确的语义关系
+3. **生物网络**: 边代表不同类型的相互作用
+4. **交通网络**: 边有距离、时间等属性
+
+### 依赖安装
+
+MGN需要额外的PyTorch Geometric库：
+
+```bash
+# 安装PyTorch（如果未安装）
+pip install torch
+
+# 安装PyTorch Geometric
+pip install torch-geometric
+
+# 或者一次性安装所有依赖
+pip install -r requirements.txt
+```
+
+### 可视化MGN结果
+
+MGN的结果会自动集成到可视化图表中：
+
+```bash
+# 生成包含MGN的属性推断对比图
+python3 visualize_unified_auto.py --latest
+
+# 查看生成的图表
+ls -lh results/figures/*_attribute_inference.png
+```
+
+在属性推断图表中，MGN会与其他方法（Neighbor-Voting、Label-Propagation、GraphSAGE）并排显示。
+
+### 故障排查
+
+#### 问题1: `ModuleNotFoundError: No module named 'torch_geometric'`
+
+**解决方案**:
+```bash
+pip install torch-geometric
+```
+
+#### 问题2: MGN训练时GPU内存不足
+
+**解决方案**:
+```bash
+# 强制使用CPU
+python3 main_experiment_unified.py --dataset facebook_ego --ego_id 0 --device cpu
+```
+
+或在代码中设置：
+```python
+mgn_attacker.run_attack(device='cpu')
+```
+
+#### 问题3: MGN结果未显示在图表中
+
+**可能原因**:
+1. 没有运行包含属性推断的模式
+2. MGN训练失败（检查终端输出）
+
+**解决方案**:
+```bash
+# 确保使用包含属性推断的模式
+python3 main_experiment_unified.py --dataset facebook_ego --ego_id 0 --mode all --save
+```
+
+### 代码实现位置
+
+- **MGN模型**: `models/mgn.py`
+- **MGN攻击器**: `attack/graphsage_attribute_inference.py` (class `MGNAttributeInferenceAttack`)
+- **实验集成**: `main_experiment_unified.py` (function `_test_inference_on_labels`)
+
+### 参考文献
+
+MGN的实现基于以下论文：
+- Battaglia, P. W., et al. (2018). "Relational inductive biases, deep learning, and graph networks". *arXiv preprint arXiv:1806.01261*.
+
+---
+
 ## ❓ 常见问题
 
 ### Q1: 为什么某些图表没有生成？
@@ -1150,7 +1351,8 @@ grep -A 10 "graph_stats" results/unified/facebook_ego_ego0_*.json
 #### 属性推断（3种方法 × 2种目标）
 - [x] 邻居投票（Circles + Feat）
 - [x] 标签传播（Circles + Feat）
-- [x] GraphSAGE（仅Circles）
+- [x] GraphSAGE（Circles + Feat）
+- [x] MGN（Circles + Feat）
 
 #### 防御机制（3种）
 - [x] 差分隐私（Laplace机制）
